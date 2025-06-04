@@ -11,13 +11,8 @@ import dotenv from 'dotenv';
 // .env dosyasını yükle - uygulama başlangıcında çalışmalı
 dotenv.config();
 
-/**
- * Main Application Configuration Object
- * 
- * Tüm environment variables'ları merkezi bir yerde toplar.
- * Tip güvenliği sağlar ve default değerler atar.
- */
-export const config = {
+// Config object
+const config = {
   // Server Configuration
   port: parseInt(process.env.PORT || '3000'), // HTTP server port
   nodeEnv: process.env.NODE_ENV || 'development', // Çalışma ortamı
