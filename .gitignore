@@ -69,3 +69,6 @@ database-schema.sql
 
 # Cursor
 .cursor/
+
+# Supabase
+supabase/
