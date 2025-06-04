@@ -64,9 +64,6 @@ jspm_packages/
 .DS_Store
 Thumbs.db 
 
-# Database
-database-schema.sql
-
 # Cursor
 .cursor/
 
