@@ -8,7 +8,7 @@
  */
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { config } from '@/config';
+import config from '@/config';
 
 // Supabase client instances - singleton pattern
 let supabaseClientInstance: SupabaseClient;

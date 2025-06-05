@@ -8,7 +8,7 @@
 
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { config } from '@/config';
+import config from '@/config';
 import { AuthModel } from './auth.model';
 import { 
   RegisterInput, 

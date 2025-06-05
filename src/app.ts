@@ -10,7 +10,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
-import { config } from '@/config';
+import config from '@/config';
 import { errorHandler } from '@/core/middlewares/errorHandler.middleware';
 import { authRoutes } from '@/features/auth';
 
