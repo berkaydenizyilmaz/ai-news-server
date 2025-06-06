@@ -8,15 +8,14 @@
 
 import { Router } from 'express';
 import { SettingsController } from './settings.controller';
-import { authMiddleware } from '@/core/middlewares/auth.middleware';
-import { adminOnlyMiddleware } from '@/core/middlewares/admin.middleware';
+import { authMiddleware, requireAdmin } from '@/core/middlewares/auth.middleware';
 
 const router = Router();
 
 // ==================== ADMIN ONLY ROUTES ====================
 
 // Tüm settings route'ları admin yetkisi gerektirir
-router.use(authMiddleware, adminOnlyMiddleware);
+router.use(authMiddleware, requireAdmin);
 
 // Ayar oluşturma
 router.post('/', SettingsController.createSetting);
