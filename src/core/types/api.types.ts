@@ -37,6 +37,8 @@ export interface PaginatedResponse<T> extends ApiResponse<T[]> {
   };
 }
 
+import { Request } from 'express';
+
 /**
  * Request with User Interface
  * 

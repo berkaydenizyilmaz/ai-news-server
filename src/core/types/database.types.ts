@@ -74,6 +74,12 @@ export type SettingType = 'string' | 'number' | 'boolean' | 'json';
 export type StatisticPeriod = 'daily' | 'weekly' | 'monthly' | 'all_time';
 
 /**
+ * Setting Category Type
+ * Ayar kategorisi tipleri
+ */
+export type SettingCategory = 'rss' | 'ai' | 'general' | 'auth' | 'news' | 'forum';
+
+/**
  * Statistic Category Type
  * İstatistik kategori tipleri
  */

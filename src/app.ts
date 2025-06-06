@@ -13,6 +13,7 @@ import morgan from 'morgan';
 import config from '@/config';
 import { errorHandler } from '@/core/middlewares/errorHandler.middleware';
 import { authRoutes } from '@/features/auth';
+import { settingsRoutes } from '@/features/settings';
 
 const app = express();
 
@@ -67,6 +68,9 @@ app.get('/api', (req, res) => {
 
 // Authentication routes
 app.use('/api/auth', authRoutes);
+
+// Settings routes
+app.use('/api/settings', settingsRoutes);
 
 // ==================== ERROR HANDLING ====================
 
