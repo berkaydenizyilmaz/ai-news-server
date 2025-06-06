@@ -164,6 +164,8 @@ export interface OriginalNews {
   author?: string;
   published_date?: string;
   rss_source_id?: string;
+  content_embedding?: number[]; // Vector embedding for similarity search
+  processed_time?: number; // AI processing time in seconds
   created_at: string;
   updated_at: string;
 }
