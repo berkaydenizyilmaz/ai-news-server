@@ -14,6 +14,7 @@ import config from '@/config';
 import { errorHandler } from '@/core/middlewares/errorHandler.middleware';
 import { authRoutes } from '@/features/auth';
 import { settingsRoutes } from '@/features/settings';
+import { rssRoutes } from '@/features/rss';
 
 const app = express();
 
@@ -71,6 +72,9 @@ app.use('/api/auth', authRoutes);
 
 // Settings routes
 app.use('/api/settings', settingsRoutes);
+
+// RSS routes
+app.use('/api/rss', rssRoutes);
 
 // ==================== ERROR HANDLING ====================
 
