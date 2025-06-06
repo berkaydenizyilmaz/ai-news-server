@@ -41,6 +41,11 @@ const config = {
   gemini: {
     apiKey: process.env.GEMINI_API_KEY!, // Google Gemini API key (required)
   },
+  
+  // Hugging Face API Configuration
+  huggingFace: {
+    apiKey: process.env.HUGGING_FACE_API_KEY!, // Hugging Face API key (required)
+  },
 } as const;
 
 // Default export - backward compatibility

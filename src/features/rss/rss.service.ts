@@ -24,6 +24,9 @@ import {
   ScrapingResult
 } from './rss.types';
 import { RssSource, OriginalNews } from '@/core/types/database.types';
+import { RssParserUtil } from '@/core/utils/rss-parser.util';
+import { WebScraperUtil } from '@/core/utils/web-scraper.util';
+import { EmbeddingUtil } from '@/core/utils/embedding.util';
 
 /**
  * RSS Service Class
@@ -73,8 +76,8 @@ export class RssService {
         }
       }
 
-      // RSS feed geçerlilik testi (basit HTTP kontrolü)
-      const isValidFeed = await this.validateRssFeed(sourceData.url);
+      // RSS feed geçerlilik testi (gerçek RSS parsing)
+      const isValidFeed = await RssParserUtil.validateRssUrl(sourceData.url);
       if (!isValidFeed) {
         return {
           success: false,
@@ -231,7 +234,7 @@ export class RssService {
         }
 
         // Yeni URL'in geçerliliğini test et
-        const isValidFeed = await this.validateRssFeed(updateData.url);
+        const isValidFeed = await RssParserUtil.validateRssUrl(updateData.url);
         if (!isValidFeed) {
           return {
             success: false,
@@ -384,36 +387,12 @@ export class RssService {
 
   // ==================== PRIVATE HELPER METHODS ====================
 
-  /**
-   * Validate RSS Feed
-   * 
-   * RSS feed'in geçerliliğini kontrol eder.
-   * 
-   * @param url - RSS feed URL'i
-   * @returns {Promise<boolean>}
-   * @private
-   */
-  private static async validateRssFeed(url: string): Promise<boolean> {
-    try {
-      // Basit HTTP kontrolü - gerçek RSS parsing sonra eklenecek
-      const response = await fetch(url, {
-        method: 'HEAD',
-        headers: {
-          'User-Agent': 'AI News Bot/1.0',
-        },
-      });
 
-      return response.ok;
-    } catch (error) {
-      console.error('Error validating RSS feed:', error);
-      return false;
-    }
-  }
 
   /**
    * Fetch Single RSS Source
    * 
-   * Tek bir RSS kaynağından haberleri çeker.
+   * Tek bir RSS kaynağından haberleri çeker, web scraping yapar ve duplicate detection uygular.
    * 
    * @param source - RSS kaynağı
    * @param maxItems - Maksimum haber sayısı
@@ -427,15 +406,95 @@ export class RssService {
     const startTime = Date.now();
     
     try {
-      // RSS feed'i çek (şimdilik placeholder)
-      // Gerçek RSS parsing ve web scraping sonraki adımda eklenecek
+      console.log(`RSS kaynağından haber çekiliyor: ${source.name}`);
       
+      // 1. RSS feed'i parse et
+      const feedData = await RssParserUtil.parseFeed(source.url);
+      
+      if (!feedData.items || feedData.items.length === 0) {
+        return {
+          source_id: source.id,
+          source_name: source.name,
+          success: false,
+          items_count: 0,
+          new_items_count: 0,
+          error: 'RSS feed\'de haber bulunamadı',
+          fetch_time: Date.now() - startTime,
+        };
+      }
+
+      // 2. Maksimum item sayısını sınırla
+      const itemsToProcess = feedData.items.slice(0, maxItems);
+      let newItemsCount = 0;
+
+      // 3. Her RSS item'ı için işlem yap
+      for (const item of itemsToProcess) {
+        try {
+          // URL duplicate kontrolü
+          const urlExists = await RssModel.checkNewsUrlExists(item.link);
+          if (urlExists) {
+            console.log(`URL zaten mevcut, atlanıyor: ${item.link}`);
+            continue;
+          }
+
+          // Web scraping ile tam içeriği çek
+          const scrapingResult = await WebScraperUtil.scrapeNewsContent(item.link);
+          
+          if (!scrapingResult.success || !scrapingResult.content) {
+            console.log(`Scraping başarısız: ${item.link} - ${scrapingResult.error}`);
+            continue;
+          }
+
+          // Duplicate detection için embedding oluştur
+          const contentForEmbedding = `${scrapingResult.content.title} ${scrapingResult.content.content}`;
+          const embeddingResult = await EmbeddingUtil.generateEmbedding(contentForEmbedding);
+          
+          let isDuplicate = false;
+          
+          if (embeddingResult.success && embeddingResult.embedding) {
+            // Benzer haberler var mı kontrol et
+            const similarNews = await RssModel.findSimilarNews(embeddingResult.embedding);
+            
+            if (similarNews.length > 0) {
+              console.log(`Benzer haber bulundu, atlanıyor: ${item.title} (Benzerlik: ${similarNews[0].similarity})`);
+              isDuplicate = true;
+            }
+          }
+
+          if (!isDuplicate) {
+            // Haberi veritabanına kaydet
+            const newsData = {
+              title: scrapingResult.content.title,
+              content: scrapingResult.content.content,
+              summary: scrapingResult.content.summary || item.description,
+              original_url: item.link,
+              image_url: scrapingResult.content.image_url,
+              author: scrapingResult.content.author || item.author,
+              published_date: scrapingResult.content.published_date || item.pubDate,
+              rss_source_id: source.id,
+              content_embedding: embeddingResult.embedding,
+              processed_time: scrapingResult.content.scrape_time + (embeddingResult.processing_time || 0),
+            };
+
+            const savedNews = await RssModel.createOriginalNews(newsData);
+            
+            if (savedNews) {
+              newItemsCount++;
+              console.log(`Yeni haber kaydedildi: ${scrapingResult.content.title}`);
+            }
+          }
+        } catch (itemError) {
+          console.error(`Item işleme hatası: ${item.link}`, itemError);
+          continue;
+        }
+      }
+
       return {
         source_id: source.id,
         source_name: source.name,
         success: true,
-        items_count: 0,
-        new_items_count: 0,
+        items_count: itemsToProcess.length,
+        new_items_count: newItemsCount,
         fetch_time: Date.now() - startTime,
       };
     } catch (error) {
