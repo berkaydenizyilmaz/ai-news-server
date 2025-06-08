@@ -16,6 +16,7 @@ import {
   LogResponse,
   AdminLogResponse
 } from './log.types';
+import { LogModule } from '@/core/types/database.types';
 
 /**
  * Log Service Class
@@ -49,10 +50,10 @@ export class LogService {
   ): Promise<LogServiceResponse<LogResponse>> {
     try {
       // Log mesajını temizle ve kısalt
-      const cleanedLogData = {
+      const cleanedLogData: CreateLogRequest = {
         ...logData,
         message: logData.message.trim(),
-        module: logData.module?.trim(),
+        module: logData.module?.trim() as LogModule | undefined,
         action: logData.action?.trim(),
       };
 
