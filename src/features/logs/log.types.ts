@@ -6,7 +6,7 @@
  * 
  */
 
-import { Log, LogLevel } from '@/core/types/database.types';
+import { Log, LogLevel, LogModule } from '@/core/types/database.types';
 
 // ==================== LOG REQUEST DTOs ====================
 
@@ -19,7 +19,7 @@ import { Log, LogLevel } from '@/core/types/database.types';
 export interface CreateLogRequest {
   level: LogLevel;                    // Log seviyesi (info, warning, error, debug)
   message: string;                    // Log mesajı
-  module?: string;                    // Hangi modülden geldiği (örn: 'auth', 'news', 'forum')
+  module?: LogModule;                 // Hangi modülden geldiği (auth, rss, news, settings, forum, users, reports, notification)
   action?: string;                    // Yapılan aksiyon (örn: 'login', 'create_post', 'view_news')
   metadata?: Record<string, any>;     // Ek bilgiler (JSON formatında)
 }
@@ -34,7 +34,7 @@ export interface GetLogsQuery {
   page?: number;                      // Sayfa numarası (default: 1)
   limit?: number;                     // Sayfa başına kayıt sayısı (default: 50)
   level?: LogLevel;                   // Log seviyesine göre filtreleme
-  module?: string;                    // Modüle göre filtreleme
+  module?: LogModule;                 // Modüle göre filtreleme
   action?: string;                    // Aksiyona göre filtreleme
   user_id?: string;                   // Kullanıcıya göre filtreleme
   start_date?: string;                // Başlangıç tarihi (ISO string)
@@ -54,7 +54,7 @@ export interface LogResponse {
   id: string;
   level: LogLevel;
   message: string;
-  module?: string;
+  module?: LogModule;
   action?: string;
   user_id?: string;
   metadata?: Record<string, any>;
@@ -100,7 +100,7 @@ export interface PaginatedLogsResponse {
 export interface LogStatsResponse {
   totalLogs: number;
   logsByLevel: Record<LogLevel, number>;
-  logsByModule: Record<string, number>;
+  logsByModule: Record<LogModule, number>;
   recentErrors: LogResponse[];
   topActions: Array<{
     action: string;

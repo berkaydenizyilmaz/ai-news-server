@@ -19,6 +19,9 @@ const ACTION_MAX_LENGTH = 100;
 // Geçerli log seviyeleri
 const LOG_LEVELS = ['info', 'warning', 'error', 'debug'] as const;
 
+// Geçerli log modülleri
+const LOG_MODULES = ['auth', 'rss', 'news', 'settings', 'forum', 'users', 'reports', 'notification'] as const;
+
 // ==================== VALIDATION SCHEMAS ====================
 
 /**
@@ -44,9 +47,9 @@ export const createLogSchema = z.object({
     .trim(),
   
   module: z
-    .string()
-    .max(MODULE_MAX_LENGTH, `Modül adı en fazla ${MODULE_MAX_LENGTH} karakter olabilir`)
-    .trim()
+    .enum(LOG_MODULES, {
+      errorMap: () => ({ message: 'Geçerli bir modül seçiniz (auth, rss, news, settings, forum, users, reports, notification)' })
+    })
     .optional(),
   
   action: z
@@ -104,9 +107,7 @@ export const getLogsQuerySchema = z.object({
     .optional(),
   
   module: z
-    .string()
-    .max(MODULE_MAX_LENGTH, `Modül adı en fazla ${MODULE_MAX_LENGTH} karakter olabilir`)
-    .trim()
+    .enum(LOG_MODULES)
     .optional(),
   
   action: z

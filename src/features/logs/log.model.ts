@@ -7,7 +7,7 @@
  */
 
 import { supabaseAdmin } from '@/database';
-import { Log, LogLevel } from '@/core/types/database.types';
+import { Log, LogLevel, LogModule } from '@/core/types/database.types';
 import { CreateLogRequest, GetLogsQuery } from './log.types';
 
 /**
@@ -248,10 +248,11 @@ export class LogModel {
 
       const logsByModule = moduleStats?.reduce((acc, log) => {
         if (log.module) {
-          acc[log.module] = (acc[log.module] || 0) + 1;
+          const module = log.module as LogModule;
+          acc[module] = (acc[module] || 0) + 1;
         }
         return acc;
-      }, {} as Record<string, number>) || {};
+      }, {} as Record<LogModule, number>) || {};
 
       // Son hatalar
       const { data: recentErrors } = await supabaseAdmin

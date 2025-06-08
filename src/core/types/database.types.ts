@@ -62,6 +62,12 @@ export type RelatedType = 'comment' | 'forum_post' | 'news' | 'forum_topic';
 export type LogLevel = 'info' | 'warning' | 'error' | 'debug';
 
 /**
+ * Log Module Type
+ * Log modül tipleri
+ */
+export type LogModule = 'auth' | 'rss' | 'news' | 'settings' | 'forum' | 'users' | 'reports' | 'notification';
+
+/**
  * Setting Value Type
  * Ayar değeri tipleri
  */
@@ -323,7 +329,7 @@ export interface Log {
   id: string;
   level: LogLevel;
   message: string;
-  module?: string;
+  module?: LogModule;
   action?: string;
   user_id?: string;
   ip_address?: string;
