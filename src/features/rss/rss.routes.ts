@@ -8,7 +8,7 @@
 
 import { Router } from 'express';
 import { RssController } from './rss.controller';
-import { authMiddleware } from '@/core/middlewares/auth.middleware';
+import { authMiddleware, requireAdmin } from '@/core/middlewares/auth.middleware';
 
 const router = Router();
 
@@ -23,16 +23,16 @@ router.get('/sources/:id', RssController.getRssSourceById);
 // ==================== PROTECTED ROUTES ====================
 
 // RSS kaynağı oluştur - admin yetkisi gerektirir
-router.post('/sources', authMiddleware, RssController.createRssSource);
+router.post('/sources', authMiddleware, requireAdmin, RssController.createRssSource);
 
 // RSS kaynağını güncelle - admin yetkisi gerektirir
-router.put('/sources/:id', authMiddleware, RssController.updateRssSource);
+router.put('/sources/:id', authMiddleware, requireAdmin, RssController.updateRssSource);
 
 // RSS kaynağını sil - admin yetkisi gerektirir
-router.delete('/sources/:id', authMiddleware, RssController.deleteRssSource);
+router.delete('/sources/:id', authMiddleware, requireAdmin, RssController.deleteRssSource);
 
 // RSS kaynaklarından haber çek - admin yetkisi gerektirir
-router.post('/fetch', authMiddleware, RssController.fetchRssFeeds);
+router.post('/fetch', authMiddleware, requireAdmin, RssController.fetchRssFeeds);
 
 // ==================== EXPORT ====================
 
