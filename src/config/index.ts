@@ -45,8 +45,10 @@ const config = {
   // Hugging Face API Configuration
   huggingFace: {
     apiKey: process.env.HUGGING_FACE_API_KEY!, // Hugging Face API key (required)
+    baseUrl: 'https://api-inference.huggingface.co', // Hugging Face API base URL
+    model: 'sentence-transformers/all-MiniLM-L6-v2', // Hugging Face model name
   },
 } as const;
 
 // Default export - backward compatibility
-export default config; 
+export default config;
