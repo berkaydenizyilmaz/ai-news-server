@@ -16,7 +16,6 @@ dist/
 build/
 
 # Logs
-logs
 *.log
 
 # Runtime data
@@ -69,3 +68,6 @@ Thumbs.db
 
 # Supabase
 supabase/
+
+# API DOCS
+API_DOCUMENTATION.md

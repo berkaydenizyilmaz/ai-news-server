@@ -6,6 +6,8 @@
  * 
  */
 
+import config from '@/config';
+
 /**
  * Embedding Response Interface
  * 
@@ -35,7 +37,7 @@ interface SimilarityResult {
  * Static metodlarla embedding işlemlerini yönetir.
  */
 export class EmbeddingUtil {
-  private static readonly HUGGING_FACE_API_URL = 'https://api-inference.huggingface.co/pipeline/feature-extraction/sentence-transformers/all-MiniLM-L6-v2';
+  private static readonly HUGGING_FACE_API_URL = `${config.huggingFace.baseUrl}/models/${config.huggingFace.model}`;
   private static readonly SIMILARITY_THRESHOLD = 0.85; // %85 benzerlik eşiği
   private static readonly MAX_TEXT_LENGTH = 512; // Model limiti
   private static readonly REQUEST_TIMEOUT = 30000; // 30 saniye
@@ -67,7 +69,7 @@ export class EmbeddingUtil {
       const response = await fetch(this.HUGGING_FACE_API_URL, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${process.env.HUGGING_FACE_API_KEY}`,
+          'Authorization': `Bearer ${config.huggingFace.apiKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
