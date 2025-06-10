@@ -7,9 +7,8 @@
  */
 
 import { supabaseAdmin } from '@/database';
-import { RssSource, NewsCategory, OriginalNews } from '@/core/types/database.types';
+import { RssSource, OriginalNews } from '@/core/types/database.types';
 import { CreateRssSourceInput, UpdateRssSourceInput, RssSourceQueryInput } from './rss.validation';
-import { RssSourceWithCategory } from './rss.types';
 
 /**
  * RSS Model Class
@@ -41,7 +40,6 @@ export class RssModel {
           name: sourceData.name,
           url: sourceData.url,
           description: sourceData.description,
-          category_id: sourceData.category_id,
           created_by: createdBy,
           is_active: true,
         })
@@ -66,25 +64,18 @@ export class RssModel {
    * RSS kaynaklarını sayfalama ve filtreleme ile getirir.
    * 
    * @param queryParams - Filtreleme ve sayfalama parametreleri
-   * @returns {Promise<{sources: RssSourceWithCategory[], total: number} | null>}
+   * @returns {Promise<{sources: RssSource[], total: number} | null>}
    */
   static async getRssSources(queryParams: RssSourceQueryInput): Promise<{
-    sources: RssSourceWithCategory[];
+    sources: RssSource[];
     total: number;
   } | null> {
     try {
       let query = supabaseAdmin
         .from('rss_sources')
-        .select(`
-          *,
-          category:news_categories(*)
-        `, { count: 'exact' });
+        .select('*', { count: 'exact' });
 
       // Filtreleme
-      if (queryParams.category_id) {
-        query = query.eq('category_id', queryParams.category_id);
-      }
-
       if (queryParams.is_active !== undefined) {
         query = query.eq('is_active', queryParams.is_active);
       }
@@ -122,16 +113,13 @@ export class RssModel {
    * ID'ye göre RSS kaynağını getirir.
    * 
    * @param id - RSS kaynak ID'si
-   * @returns {Promise<RssSourceWithCategory | null>}
+   * @returns {Promise<RssSource | null>}
    */
-  static async getRssSourceById(id: string): Promise<RssSourceWithCategory | null> {
+  static async getRssSourceById(id: string): Promise<RssSource | null> {
     try {
       const { data, error } = await supabaseAdmin
         .from('rss_sources')
-        .select(`
-          *,
-          category:news_categories(*)
-        `)
+        .select('*')
         .eq('id', id)
         .single();
 

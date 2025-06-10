@@ -148,7 +148,6 @@ export interface RssSource {
   name: string;
   url: string;
   description?: string;
-  category_id?: string;
   is_active: boolean;
   last_fetched_at?: string;
   created_by?: string;
@@ -408,13 +407,7 @@ export interface OriginalNewsWithSource extends OriginalNews {
   rss_source?: RssSource;
 }
 
-/**
- * RSS Source with Category Interface
- * RSS kaynağını kategorisiyle birlikte tanımlar
- */
-export interface RssSourceWithCategory extends RssSource {
-  category?: NewsCategory;
-}
+
 
 /**
  * Comment with User Interface

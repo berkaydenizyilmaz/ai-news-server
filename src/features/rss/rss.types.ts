@@ -6,7 +6,7 @@
  * 
  */
 
-import { RssSource, NewsCategory } from '@/core/types/database.types';
+import { RssSource } from '@/core/types/database.types';
 
 // ==================== RSS REQUEST DTOs ====================
 
@@ -20,7 +20,6 @@ export interface CreateRssSourceRequest {
   name: string;           // RSS kaynağının adı
   url: string;           // RSS feed URL'i
   description?: string;  // Açıklama (opsiyonel)
-  category_id?: string;  // Haber kategorisi ID'si (opsiyonel)
 }
 
 /**
@@ -32,7 +31,6 @@ export interface UpdateRssSourceRequest {
   name?: string;         // RSS kaynağının adı
   url?: string;          // RSS feed URL'i
   description?: string;  // Açıklama
-  category_id?: string;  // Haber kategorisi ID'si
   is_active?: boolean;   // Aktif/pasif durumu
 }
 
@@ -49,14 +47,7 @@ export interface RssFetchRequest {
 
 // ==================== RSS RESPONSE DTOs ====================
 
-/**
- * RSS Source with Category Response DTO
- * 
- * RSS kaynağını kategori bilgisiyle birlikte döner.
- */
-export interface RssSourceWithCategory extends RssSource {
-  category?: NewsCategory;
-}
+
 
 /**
  * RSS Feed Item Interface

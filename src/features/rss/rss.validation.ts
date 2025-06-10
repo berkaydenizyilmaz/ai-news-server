@@ -26,7 +26,6 @@ const URL_REGEX = /^https?:\/\/.+/;
  * - Name: 3-255 karakter, zorunlu
  * - URL: Geçerli HTTP/HTTPS URL, zorunlu
  * - Description: Opsiyonel string
- * - Category ID: Opsiyonel UUID
  */
 export const createRssSourceSchema = z.object({
   name: z
@@ -43,11 +42,6 @@ export const createRssSourceSchema = z.object({
   description: z
     .string()
     .max(1000, 'Açıklama en fazla 1000 karakter olmalıdır')
-    .optional(),
-  
-  category_id: z
-    .string()
-    .uuid('Geçerli bir kategori ID giriniz')
     .optional(),
 });
 
@@ -73,12 +67,6 @@ export const updateRssSourceSchema = z.object({
   description: z
     .string()
     .max(1000, 'Açıklama en fazla 1000 karakter olmalıdır')
-    .optional(),
-  
-  category_id: z
-    .string()
-    .uuid('Geçerli bir kategori ID giriniz')
-    .nullable()
     .optional(),
   
   is_active: z
@@ -129,7 +117,6 @@ export const rssSourceIdSchema = z.object({
  * RSS kaynak listesi için query parametreleri validasyonu:
  * - Page: Sayfa numarası
  * - Limit: Sayfa başına öğe sayısı
- * - Category ID: Kategori filtresi
  * - Active: Aktif/pasif filtresi
  * - Search: Arama terimi
  */
@@ -149,11 +136,6 @@ export const rssSourceQuerySchema = z.object({
     .refine(val => val >= 1 && val <= 100, 'Limit 1-100 arasında olmalıdır')
     .optional()
     .default('10'),
-  
-  category_id: z
-    .string()
-    .uuid('Geçerli bir kategori ID giriniz')
-    .optional(),
   
   is_active: z
     .string()

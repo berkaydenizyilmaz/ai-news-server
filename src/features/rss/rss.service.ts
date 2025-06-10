@@ -15,15 +15,10 @@ import {
 } from './rss.validation';
 import { 
   RssServiceResponse,
-  RssSourceWithCategory,
-  RssFeedResponse,
-  RssFeedItem,
   RssFetchResult,
   BulkRssFetchResult,
-  ScrapedNewsContent,
-  ScrapingResult
 } from './rss.types';
-import { RssSource, OriginalNews } from '@/core/types/database.types';
+import { RssSource } from '@/core/types/database.types';
 import { RssParserUtil } from '@/core/utils/rss-parser.util';
 import { WebScraperUtil } from '@/core/utils/web-scraper.util';
 import { EmbeddingUtil } from '@/core/utils/embedding.util';
@@ -115,12 +110,12 @@ export class RssService {
    * RSS kaynaklarını sayfalama ve filtreleme ile getirme işlemi.
    * 
    * @param queryParams - Filtreleme ve sayfalama parametreleri
-   * @returns {Promise<RssServiceResponse<{sources: RssSourceWithCategory[], total: number, page: number, limit: number}>>}
+   * @returns {Promise<RssServiceResponse<{sources: RssSource[], total: number, page: number, limit: number}>>}
    */
   static async getRssSources(
     queryParams: RssSourceQueryInput
   ): Promise<RssServiceResponse<{
-    sources: RssSourceWithCategory[];
+    sources: RssSource[];
     total: number;
     page: number;
     limit: number;
@@ -163,9 +158,9 @@ export class RssService {
    * ID'ye göre RSS kaynağını getirme işlemi.
    * 
    * @param id - RSS kaynak ID'si
-   * @returns {Promise<RssServiceResponse<RssSourceWithCategory>>}
+   * @returns {Promise<RssServiceResponse<RssSource>>}
    */
-  static async getRssSourceById(id: string): Promise<RssServiceResponse<RssSourceWithCategory>> {
+  static async getRssSourceById(id: string): Promise<RssServiceResponse<RssSource>> {
     try {
       const rssSource = await RssModel.getRssSourceById(id);
 
