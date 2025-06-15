@@ -19,6 +19,7 @@ import {
   SettingsFilterInput
 } from './settings.validation';
 import { HTTP_STATUS } from '@/core/constants';
+import { SETTINGS_VALIDATION_MESSAGES } from './settings.constants';
 
 /**
  * Settings Controller Class
@@ -49,7 +50,7 @@ export class SettingsController {
       if (!validationResult.success) {
         res.status(HTTP_STATUS.BAD_REQUEST).json({
           success: false,
-          message: 'Geçersiz veri formatı',
+          message: SETTINGS_VALIDATION_MESSAGES.INVALID_DATA_FORMAT,
           errors: validationResult.error.errors.map(err => ({
             field: err.path.join('.'),
             message: err.message,
@@ -102,7 +103,7 @@ export class SettingsController {
       if (!validationResult.success) {
         res.status(HTTP_STATUS.BAD_REQUEST).json({
           success: false,
-          message: 'Geçersiz filtre parametreleri',
+          message: SETTINGS_VALIDATION_MESSAGES.INVALID_DATA_FORMAT,
           errors: validationResult.error.errors.map(err => ({
             field: err.path.join('.'),
             message: err.message,
@@ -152,7 +153,7 @@ export class SettingsController {
       if (!key) {
         res.status(HTTP_STATUS.BAD_REQUEST).json({
           success: false,
-          message: 'Ayar anahtarı gereklidir',
+          message: SETTINGS_VALIDATION_MESSAGES.KEY_REQUIRED,
         });
         return;
       }
@@ -195,7 +196,7 @@ export class SettingsController {
       if (!category) {
         res.status(HTTP_STATUS.BAD_REQUEST).json({
           success: false,
-          message: 'Kategori gereklidir',
+          message: SETTINGS_VALIDATION_MESSAGES.INVALID_CATEGORY,
         });
         return;
       }
@@ -241,7 +242,7 @@ export class SettingsController {
       if (!key) {
         res.status(HTTP_STATUS.BAD_REQUEST).json({
           success: false,
-          message: 'Ayar anahtarı gereklidir',
+          message: SETTINGS_VALIDATION_MESSAGES.KEY_REQUIRED,
         });
         return;
       }
@@ -252,7 +253,7 @@ export class SettingsController {
       if (!validationResult.success) {
         res.status(HTTP_STATUS.BAD_REQUEST).json({
           success: false,
-          message: 'Geçersiz veri formatı',
+          message: SETTINGS_VALIDATION_MESSAGES.INVALID_DATA_FORMAT,
           errors: validationResult.error.errors.map(err => ({
             field: err.path.join('.'),
             message: err.message,
@@ -303,7 +304,7 @@ export class SettingsController {
       if (!validationResult.success) {
         res.status(HTTP_STATUS.BAD_REQUEST).json({
           success: false,
-          message: 'Geçersiz veri formatı',
+          message: SETTINGS_VALIDATION_MESSAGES.INVALID_DATA_FORMAT,
           errors: validationResult.error.errors.map(err => ({
             field: err.path.join('.'),
             message: err.message,
@@ -354,7 +355,7 @@ export class SettingsController {
       if (!key) {
         res.status(HTTP_STATUS.BAD_REQUEST).json({
           success: false,
-          message: 'Ayar anahtarı gereklidir',
+          message: SETTINGS_VALIDATION_MESSAGES.KEY_REQUIRED,
         });
         return;
       }

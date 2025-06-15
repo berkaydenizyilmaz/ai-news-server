@@ -6,17 +6,14 @@
  */
 
 import { z } from 'zod';
-
-// ==================== VALIDATION CONSTANTS ====================
-
-// Setting key ve description için minimum/maksimum değerler
-const SETTING_KEY_MIN_LENGTH = 2;
-const SETTING_KEY_MAX_LENGTH = 100;
-const SETTING_DESCRIPTION_MAX_LENGTH = 500;
-
-// Desteklenen setting tipleri ve kategorileri
-const SETTING_TYPES = ['string', 'number', 'boolean', 'json'] as const;
-const SETTING_CATEGORIES = ['rss', 'ai', 'general', 'auth', 'news', 'forum'] as const;
+import { 
+  SETTING_KEY_CONSTRAINTS,
+  SETTING_DESCRIPTION_CONSTRAINTS,
+  BULK_UPDATE_CONSTRAINTS,
+  SETTING_TYPES,
+  SETTING_CATEGORIES,
+  SETTINGS_VALIDATION_MESSAGES 
+} from './settings.constants';
 
 // ==================== VALIDATION SCHEMAS ====================
 
@@ -33,28 +30,28 @@ const SETTING_CATEGORIES = ['rss', 'ai', 'general', 'auth', 'news', 'forum'] as 
 export const createSettingSchema = z.object({
   key: z
     .string()
-    .min(SETTING_KEY_MIN_LENGTH, `Ayar anahtarı en az ${SETTING_KEY_MIN_LENGTH} karakter olmalıdır`)
-    .max(SETTING_KEY_MAX_LENGTH, `Ayar anahtarı en fazla ${SETTING_KEY_MAX_LENGTH} karakter olmalıdır`)
-    .regex(/^[a-zA-Z0-9_.-]+$/, 'Ayar anahtarı sadece harf, rakam, alt çizgi, nokta ve tire içerebilir')
-    .min(1, 'Ayar anahtarı zorunludur'),
+    .min(SETTING_KEY_CONSTRAINTS.MIN_LENGTH, SETTINGS_VALIDATION_MESSAGES.KEY_TOO_SHORT)
+    .max(SETTING_KEY_CONSTRAINTS.MAX_LENGTH, SETTINGS_VALIDATION_MESSAGES.KEY_TOO_LONG)
+    .regex(SETTING_KEY_CONSTRAINTS.REGEX, SETTINGS_VALIDATION_MESSAGES.KEY_INVALID_CHARS)
+    .min(1, SETTINGS_VALIDATION_MESSAGES.KEY_REQUIRED),
   
   value: z
     .string()
-    .min(1, 'Ayar değeri zorunludur'),
+    .min(1, SETTINGS_VALIDATION_MESSAGES.VALUE_REQUIRED),
   
   type: z
     .enum(SETTING_TYPES, {
-      errorMap: () => ({ message: 'Geçerli bir ayar tipi seçiniz' })
+      errorMap: () => ({ message: SETTINGS_VALIDATION_MESSAGES.INVALID_SETTING_TYPE })
     }),
   
   description: z
     .string()
-    .max(SETTING_DESCRIPTION_MAX_LENGTH, `Açıklama en fazla ${SETTING_DESCRIPTION_MAX_LENGTH} karakter olmalıdır`)
+    .max(SETTING_DESCRIPTION_CONSTRAINTS.MAX_LENGTH, SETTINGS_VALIDATION_MESSAGES.DESCRIPTION_TOO_LONG)
     .optional(),
   
   category: z
     .enum(SETTING_CATEGORIES, {
-      errorMap: () => ({ message: 'Geçerli bir kategori seçiniz' })
+      errorMap: () => ({ message: SETTINGS_VALIDATION_MESSAGES.INVALID_CATEGORY })
     })
     .optional(),
 });
@@ -69,11 +66,11 @@ export const createSettingSchema = z.object({
 export const updateSettingSchema = z.object({
   value: z
     .string()
-    .min(1, 'Ayar değeri zorunludur'),
+    .min(1, SETTINGS_VALIDATION_MESSAGES.VALUE_REQUIRED),
   
   description: z
     .string()
-    .max(SETTING_DESCRIPTION_MAX_LENGTH, `Açıklama en fazla ${SETTING_DESCRIPTION_MAX_LENGTH} karakter olmalıdır`)
+    .max(SETTING_DESCRIPTION_CONSTRAINTS.MAX_LENGTH, SETTINGS_VALIDATION_MESSAGES.DESCRIPTION_TOO_LONG)
     .optional(),
 });
 
@@ -89,13 +86,13 @@ export const bulkUpdateSettingsSchema = z.object({
       z.object({
         key: z
           .string()
-          .min(1, 'Ayar anahtarı zorunludur'),
+          .min(1, SETTINGS_VALIDATION_MESSAGES.KEY_REQUIRED),
         value: z
           .string()
-          .min(1, 'Ayar değeri zorunludur'),
+          .min(1, SETTINGS_VALIDATION_MESSAGES.VALUE_REQUIRED),
       })
     )
-    .min(1, 'En az bir ayar güncellenmeli'),
+    .min(BULK_UPDATE_CONSTRAINTS.MIN_SETTINGS, SETTINGS_VALIDATION_MESSAGES.MIN_SETTINGS_REQUIRED),
 });
 
 /**

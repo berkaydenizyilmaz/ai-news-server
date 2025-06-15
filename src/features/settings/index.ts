@@ -10,4 +10,5 @@ export { SettingsController } from './settings.controller';
 export { SettingsService } from './settings.service';
 export { SettingsModel } from './settings.model';
 export * from './settings.types';
-export * from './settings.validation'; 
+export * from './settings.validation';
+export * from './settings.constants'; 

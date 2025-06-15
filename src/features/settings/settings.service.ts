@@ -18,6 +18,10 @@ import {
   TypedSettingValue
 } from './settings.types';
 import { Setting, SettingType } from '@/core/types/database.types';
+import { 
+  SETTINGS_ERROR_MESSAGES,
+  SETTINGS_SUCCESS_MESSAGES 
+} from './settings.constants';
 
 /**
  * Settings Service Class
@@ -48,7 +52,7 @@ export class SettingsService {
       if (keyExists) {
         return {
           success: false,
-          error: 'Bu ayar anahtarı zaten kullanılıyor',
+          error: SETTINGS_ERROR_MESSAGES.KEY_EXISTS,
         };
       }
 
@@ -56,7 +60,7 @@ export class SettingsService {
       if (!this.validateSettingValue(settingData.value, settingData.type)) {
         return {
           success: false,
-          error: 'Ayar değeri belirtilen tip ile uyumlu değil',
+          error: SETTINGS_ERROR_MESSAGES.INVALID_VALUE_TYPE,
         };
       }
 
@@ -66,20 +70,20 @@ export class SettingsService {
       if (!setting) {
         return {
           success: false,
-          error: 'Ayar oluşturulamadı',
+          error: SETTINGS_ERROR_MESSAGES.SETTING_CREATION_FAILED,
         };
       }
 
       return {
         success: true,
         data: setting,
-        message: 'Ayar başarıyla oluşturuldu',
+        message: SETTINGS_SUCCESS_MESSAGES.SETTING_CREATED,
       };
     } catch (error) {
       console.error('Error in createSetting service:', error);
       return {
         success: false,
-        error: 'Ayar oluşturma sırasında bir hata oluştu',
+        error: SETTINGS_ERROR_MESSAGES.SETTING_CREATION_FAILED,
       };
     }
   }
@@ -101,13 +105,13 @@ export class SettingsService {
       return {
         success: true,
         data: settings,
-        message: `${settings.length} ayar bulundu`,
+        message: SETTINGS_SUCCESS_MESSAGES.SETTINGS_FETCHED,
       };
     } catch (error) {
       console.error('Error in getAllSettings service:', error);
       return {
         success: false,
-        error: 'Ayarlar getirilirken bir hata oluştu',
+        error: SETTINGS_ERROR_MESSAGES.SETTINGS_FETCH_FAILED,
       };
     }
   }
@@ -127,7 +131,7 @@ export class SettingsService {
       if (!setting) {
         return {
           success: false,
-          error: 'Ayar bulunamadı',
+          error: SETTINGS_ERROR_MESSAGES.SETTING_NOT_FOUND,
         };
       }
 
@@ -139,7 +143,7 @@ export class SettingsService {
       console.error('Error in getSettingByKey service:', error);
       return {
         success: false,
-        error: 'Ayar getirilirken bir hata oluştu',
+        error: SETTINGS_ERROR_MESSAGES.SETTINGS_FETCH_FAILED,
       };
     }
   }
@@ -159,13 +163,13 @@ export class SettingsService {
       return {
         success: true,
         data: settings,
-        message: `${category} kategorisinde ${settings.length} ayar bulundu`,
+        message: SETTINGS_SUCCESS_MESSAGES.SETTINGS_FETCHED,
       };
     } catch (error) {
       console.error('Error in getSettingsByCategory service:', error);
       return {
         success: false,
-        error: 'Kategori ayarları getirilirken bir hata oluştu',
+        error: SETTINGS_ERROR_MESSAGES.SETTINGS_FETCH_FAILED,
       };
     }
   }
@@ -192,7 +196,7 @@ export class SettingsService {
       if (!existingSetting) {
         return {
           success: false,
-          error: 'Ayar bulunamadı',
+          error: SETTINGS_ERROR_MESSAGES.SETTING_NOT_FOUND,
         };
       }
 
@@ -200,7 +204,7 @@ export class SettingsService {
       if (!this.validateSettingValue(updateData.value, existingSetting.type)) {
         return {
           success: false,
-          error: 'Ayar değeri belirtilen tip ile uyumlu değil',
+          error: SETTINGS_ERROR_MESSAGES.INVALID_VALUE_TYPE,
         };
       }
 
@@ -210,20 +214,20 @@ export class SettingsService {
       if (!updatedSetting) {
         return {
           success: false,
-          error: 'Ayar güncellenemedi',
+          error: SETTINGS_ERROR_MESSAGES.SETTING_UPDATE_FAILED,
         };
       }
 
       return {
         success: true,
         data: updatedSetting,
-        message: 'Ayar başarıyla güncellendi',
+        message: SETTINGS_SUCCESS_MESSAGES.SETTING_UPDATED,
       };
     } catch (error) {
       console.error('Error in updateSetting service:', error);
       return {
         success: false,
-        error: 'Ayar güncelleme sırasında bir hata oluştu',
+        error: SETTINGS_ERROR_MESSAGES.SETTING_UPDATE_FAILED,
       };
     }
   }
@@ -248,14 +252,14 @@ export class SettingsService {
         if (!existingSetting) {
           return {
             success: false,
-            error: `Ayar bulunamadı: ${settingUpdate.key}`,
+            error: `${SETTINGS_ERROR_MESSAGES.SETTING_NOT_FOUND}: ${settingUpdate.key}`,
           };
         }
 
         if (!this.validateSettingValue(settingUpdate.value, existingSetting.type)) {
           return {
             success: false,
-            error: `Geçersiz değer tipi: ${settingUpdate.key}`,
+            error: `${SETTINGS_ERROR_MESSAGES.INVALID_VALUE_TYPE}: ${settingUpdate.key}`,
           };
         }
       }
@@ -266,19 +270,19 @@ export class SettingsService {
       if (!success) {
         return {
           success: false,
-          error: 'Ayarlar güncellenemedi',
+          error: SETTINGS_ERROR_MESSAGES.BULK_UPDATE_FAILED,
         };
       }
 
       return {
         success: true,
-        message: `${bulkData.settings.length} ayar başarıyla güncellendi`,
+        message: SETTINGS_SUCCESS_MESSAGES.BULK_UPDATE_SUCCESS,
       };
     } catch (error) {
       console.error('Error in bulkUpdateSettings service:', error);
       return {
         success: false,
-        error: 'Toplu güncelleme sırasında bir hata oluştu',
+        error: SETTINGS_ERROR_MESSAGES.BULK_UPDATE_FAILED,
       };
     }
   }
@@ -303,7 +307,7 @@ export class SettingsService {
       if (!existingSetting) {
         return {
           success: false,
-          error: 'Ayar bulunamadı',
+          error: SETTINGS_ERROR_MESSAGES.SETTING_NOT_FOUND,
         };
       }
 
@@ -313,19 +317,19 @@ export class SettingsService {
       if (!success) {
         return {
           success: false,
-          error: 'Ayar silinemedi',
+          error: SETTINGS_ERROR_MESSAGES.SETTING_DELETE_FAILED,
         };
       }
 
       return {
         success: true,
-        message: 'Ayar başarıyla silindi',
+        message: SETTINGS_SUCCESS_MESSAGES.SETTING_DELETED,
       };
     } catch (error) {
       console.error('Error in deleteSetting service:', error);
       return {
         success: false,
-        error: 'Ayar silme sırasında bir hata oluştu',
+        error: SETTINGS_ERROR_MESSAGES.SETTING_DELETE_FAILED,
       };
     }
   }
@@ -347,7 +351,7 @@ export class SettingsService {
       if (!setting) {
         return {
           success: false,
-          error: 'Ayar bulunamadı',
+          error: SETTINGS_ERROR_MESSAGES.SETTING_NOT_FOUND,
         };
       }
 
@@ -365,7 +369,7 @@ export class SettingsService {
       console.error('Error in getTypedSettingValue service:', error);
       return {
         success: false,
-        error: 'Ayar değeri dönüştürülürken bir hata oluştu',
+        error: SETTINGS_ERROR_MESSAGES.VALUE_CONVERSION_FAILED,
       };
     }
   }
