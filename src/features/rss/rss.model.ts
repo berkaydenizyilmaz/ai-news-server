@@ -9,6 +9,7 @@
 import { supabaseAdmin } from '@/database';
 import { RssSource, OriginalNews } from '@/core/types/database.types';
 import { CreateRssSourceInput, UpdateRssSourceInput, RssSourceQueryInput } from './rss.validation';
+import { RSS_SIMILARITY_CONFIG } from './rss.constants';
 
 /**
  * RSS Model Class
@@ -339,7 +340,7 @@ export class RssModel {
    */
   static async findSimilarNews(
     embedding: number[], 
-    threshold: number = 0.85
+    threshold: number = RSS_SIMILARITY_CONFIG.DEFAULT_THRESHOLD
   ): Promise<{id: string, title: string, similarity: number}[]> {
     try {
       const { data, error } = await supabaseAdmin

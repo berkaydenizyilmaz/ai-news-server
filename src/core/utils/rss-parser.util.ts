@@ -8,6 +8,7 @@
 
 import Parser from 'rss-parser';
 import { RssFeedResponse, RssFeedItem } from '@/features/rss/rss.types';
+import { RSS_PARSER_CONFIG } from '@/features/rss/rss.constants';
 
 /**
  * RSS Parser Class
@@ -16,10 +17,10 @@ import { RssFeedResponse, RssFeedItem } from '@/features/rss/rss.types';
  */
 export class RssParserUtil {
   private static parser = new Parser({
-    timeout: 10000, // 10 saniye timeout
+    timeout: RSS_PARSER_CONFIG.TIMEOUT,
     headers: {
-      'User-Agent': 'AI News Bot/1.0',
-      'Accept': 'application/rss+xml, application/xml, text/xml',
+      'User-Agent': RSS_PARSER_CONFIG.USER_AGENT,
+      'Accept': RSS_PARSER_CONFIG.ACCEPT_HEADER,
     },
   });
 

@@ -7,6 +7,14 @@
  */
 
 import { z } from 'zod';
+import { 
+  RSS_NAME_CONSTRAINTS,
+  RSS_DESCRIPTION_CONSTRAINTS,
+  RSS_URL_VALIDATION,
+  RSS_FETCH_CONSTRAINTS,
+  RSS_QUERY_CONSTRAINTS,
+  RSS_VALIDATION_MESSAGES
+} from './rss.constants';
 
 // ==================== VALIDATION CONSTANTS ====================
 
@@ -30,18 +38,18 @@ const URL_REGEX = /^https?:\/\/.+/;
 export const createRssSourceSchema = z.object({
   name: z
     .string()
-    .min(RSS_NAME_MIN_LENGTH, `RSS kaynak adı en az ${RSS_NAME_MIN_LENGTH} karakter olmalıdır`)
-    .max(RSS_NAME_MAX_LENGTH, `RSS kaynak adı en fazla ${RSS_NAME_MAX_LENGTH} karakter olmalıdır`)
-    .min(1, 'RSS kaynak adı zorunludur'),
+    .min(RSS_NAME_CONSTRAINTS.MIN_LENGTH, RSS_VALIDATION_MESSAGES.NAME_MIN_LENGTH)
+    .max(RSS_NAME_CONSTRAINTS.MAX_LENGTH, RSS_VALIDATION_MESSAGES.NAME_MAX_LENGTH)
+    .min(1, RSS_VALIDATION_MESSAGES.NAME_REQUIRED),
   
   url: z
     .string()
-    .regex(URL_REGEX, 'Geçerli bir HTTP/HTTPS URL giriniz')
-    .min(1, 'RSS URL zorunludur'),
+    .regex(RSS_URL_VALIDATION.REGEX, RSS_VALIDATION_MESSAGES.URL_INVALID)
+    .min(1, RSS_VALIDATION_MESSAGES.URL_REQUIRED),
   
   description: z
     .string()
-    .max(1000, 'Açıklama en fazla 1000 karakter olmalıdır')
+    .max(RSS_DESCRIPTION_CONSTRAINTS.MAX_LENGTH, RSS_VALIDATION_MESSAGES.DESCRIPTION_MAX_LENGTH)
     .optional(),
 });
 
@@ -55,18 +63,18 @@ export const createRssSourceSchema = z.object({
 export const updateRssSourceSchema = z.object({
   name: z
     .string()
-    .min(RSS_NAME_MIN_LENGTH, `RSS kaynak adı en az ${RSS_NAME_MIN_LENGTH} karakter olmalıdır`)
-    .max(RSS_NAME_MAX_LENGTH, `RSS kaynak adı en fazla ${RSS_NAME_MAX_LENGTH} karakter olmalıdır`)
+    .min(RSS_NAME_CONSTRAINTS.MIN_LENGTH, RSS_VALIDATION_MESSAGES.NAME_MIN_LENGTH)
+    .max(RSS_NAME_CONSTRAINTS.MAX_LENGTH, RSS_VALIDATION_MESSAGES.NAME_MAX_LENGTH)
     .optional(),
   
   url: z
     .string()
-    .regex(URL_REGEX, 'Geçerli bir HTTP/HTTPS URL giriniz')
+    .regex(RSS_URL_VALIDATION.REGEX, RSS_VALIDATION_MESSAGES.URL_INVALID)
     .optional(),
   
   description: z
     .string()
-    .max(1000, 'Açıklama en fazla 1000 karakter olmalıdır')
+    .max(RSS_DESCRIPTION_CONSTRAINTS.MAX_LENGTH, RSS_VALIDATION_MESSAGES.DESCRIPTION_MAX_LENGTH)
     .optional(),
   
   is_active: z
@@ -85,14 +93,14 @@ export const updateRssSourceSchema = z.object({
 export const rssFetchSchema = z.object({
   source_id: z
     .string()
-    .uuid('Geçerli bir kaynak ID giriniz')
+    .uuid(RSS_VALIDATION_MESSAGES.UUID_INVALID)
     .optional(),
   
   max_items: z
     .number()
-    .int('Maksimum öğe sayısı tam sayı olmalıdır')
-    .min(1, 'Maksimum öğe sayısı en az 1 olmalıdır')
-    .max(100, 'Maksimum öğe sayısı en fazla 100 olmalıdır')
+    .int(RSS_VALIDATION_MESSAGES.MAX_ITEMS_INVALID)
+    .min(RSS_FETCH_CONSTRAINTS.MAX_ITEMS_MIN, RSS_VALIDATION_MESSAGES.MAX_ITEMS_MIN)
+    .max(RSS_FETCH_CONSTRAINTS.MAX_ITEMS_MAX, RSS_VALIDATION_MESSAGES.MAX_ITEMS_MAX)
     .optional(),
   
   force_refresh: z
@@ -108,7 +116,7 @@ export const rssFetchSchema = z.object({
 export const rssSourceIdSchema = z.object({
   id: z
     .string()
-    .uuid('Geçerli bir RSS kaynak ID giriniz'),
+    .uuid(RSS_VALIDATION_MESSAGES.SOURCE_ID_INVALID),
 });
 
 /**
@@ -123,30 +131,30 @@ export const rssSourceIdSchema = z.object({
 export const rssSourceQuerySchema = z.object({
   page: z
     .string()
-    .regex(/^\d+$/, 'Sayfa numarası geçerli bir sayı olmalıdır')
+    .regex(/^\d+$/, RSS_VALIDATION_MESSAGES.PAGE_INVALID)
     .transform(Number)
-    .refine(val => val >= 1, 'Sayfa numarası en az 1 olmalıdır')
+    .refine(val => val >= RSS_QUERY_CONSTRAINTS.PAGE_MIN, RSS_VALIDATION_MESSAGES.PAGE_MIN)
     .optional()
     .default('1'),
   
   limit: z
     .string()
-    .regex(/^\d+$/, 'Limit geçerli bir sayı olmalıdır')
+    .regex(/^\d+$/, RSS_VALIDATION_MESSAGES.LIMIT_INVALID)
     .transform(Number)
-    .refine(val => val >= 1 && val <= 100, 'Limit 1-100 arasında olmalıdır')
+    .refine(val => val >= RSS_QUERY_CONSTRAINTS.LIMIT_MIN && val <= RSS_QUERY_CONSTRAINTS.LIMIT_MAX, RSS_VALIDATION_MESSAGES.LIMIT_RANGE)
     .optional()
-    .default('10'),
+    .default(RSS_QUERY_CONSTRAINTS.LIMIT_DEFAULT.toString()),
   
   is_active: z
     .string()
-    .regex(/^(true|false)$/, 'Aktif durumu true veya false olmalıdır')
+    .regex(/^(true|false)$/, RSS_VALIDATION_MESSAGES.ACTIVE_STATUS_INVALID)
     .transform(val => val === 'true')
     .optional(),
   
   search: z
     .string()
-    .min(2, 'Arama terimi en az 2 karakter olmalıdır')
-    .max(100, 'Arama terimi en fazla 100 karakter olmalıdır')
+    .min(RSS_QUERY_CONSTRAINTS.SEARCH_MIN_LENGTH, RSS_VALIDATION_MESSAGES.SEARCH_MIN_LENGTH)
+    .max(RSS_QUERY_CONSTRAINTS.SEARCH_MAX_LENGTH, RSS_VALIDATION_MESSAGES.SEARCH_MAX_LENGTH)
     .optional(),
 });
 

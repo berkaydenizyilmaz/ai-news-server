@@ -18,6 +18,10 @@ import {
   RssFetchResult,
   BulkRssFetchResult,
 } from './rss.types';
+import { 
+  RSS_ERROR_MESSAGES,
+  RSS_SUCCESS_MESSAGES 
+} from './rss.constants';
 import { RssSource } from '@/core/types/database.types';
 import { RssParserUtil } from '@/core/utils/rss-parser.util';
 import { WebScraperUtil } from '@/core/utils/web-scraper.util';
@@ -66,7 +70,7 @@ export class RssService {
         if (duplicateSource) {
           return {
             success: false,
-            error: 'Bu RSS URL\'i zaten mevcut',
+            error: RSS_ERROR_MESSAGES.URL_DUPLICATE,
           };
         }
       }
@@ -76,7 +80,7 @@ export class RssService {
       if (!isValidFeed) {
         return {
           success: false,
-          error: 'RSS feed\'e erişilemiyor veya geçersiz format',
+          error: RSS_ERROR_MESSAGES.URL_INVALID_FEED,
         };
       }
 
@@ -86,20 +90,20 @@ export class RssService {
       if (!rssSource) {
         return {
           success: false,
-          error: 'RSS kaynağı oluşturulamadı',
+          error: RSS_ERROR_MESSAGES.SOURCE_CREATE_FAILED,
         };
       }
 
       return {
         success: true,
         data: rssSource,
-        message: 'RSS kaynağı başarıyla oluşturuldu',
+        message: RSS_SUCCESS_MESSAGES.SOURCE_CREATED,
       };
     } catch (error) {
       console.error('Error in createRssSource service:', error);
       return {
         success: false,
-        error: 'RSS kaynağı oluşturma işlemi sırasında bir hata oluştu',
+        error: RSS_ERROR_MESSAGES.OPERATION_FAILED,
       };
     }
   }
@@ -127,7 +131,7 @@ export class RssService {
       if (!result) {
         return {
           success: false,
-          error: 'RSS kaynakları getirilemedi',
+          error: RSS_ERROR_MESSAGES.SOURCE_FETCH_FAILED,
         };
       }
 
@@ -147,7 +151,7 @@ export class RssService {
       console.error('Error in getRssSources service:', error);
       return {
         success: false,
-        error: 'RSS kaynakları getirme işlemi sırasında bir hata oluştu',
+        error: RSS_ERROR_MESSAGES.OPERATION_FAILED,
       };
     }
   }
@@ -167,7 +171,7 @@ export class RssService {
       if (!rssSource) {
         return {
           success: false,
-          error: 'RSS kaynağı bulunamadı',
+          error: RSS_ERROR_MESSAGES.SOURCE_NOT_FOUND,
         };
       }
 
@@ -179,7 +183,7 @@ export class RssService {
       console.error('Error in getRssSourceById service:', error);
       return {
         success: false,
-        error: 'RSS kaynağı getirme işlemi sırasında bir hata oluştu',
+        error: RSS_ERROR_MESSAGES.OPERATION_FAILED,
       };
     }
   }
@@ -203,7 +207,7 @@ export class RssService {
       if (!existingSource) {
         return {
           success: false,
-          error: 'RSS kaynağı bulunamadı',
+          error: RSS_ERROR_MESSAGES.SOURCE_NOT_FOUND,
         };
       }
 
@@ -223,7 +227,7 @@ export class RssService {
           if (duplicateSource) {
             return {
               success: false,
-              error: 'Bu RSS URL\'i zaten başka bir kaynak tarafından kullanılıyor',
+              error: RSS_ERROR_MESSAGES.URL_DUPLICATE_OTHER,
             };
           }
         }
@@ -233,7 +237,7 @@ export class RssService {
         if (!isValidFeed) {
           return {
             success: false,
-            error: 'RSS feed\'e erişilemiyor veya geçersiz format',
+            error: RSS_ERROR_MESSAGES.URL_INVALID_FEED,
           };
         }
       }
@@ -244,20 +248,20 @@ export class RssService {
       if (!updatedSource) {
         return {
           success: false,
-          error: 'RSS kaynağı güncellenemedi',
+          error: RSS_ERROR_MESSAGES.SOURCE_UPDATE_FAILED,
         };
       }
 
       return {
         success: true,
         data: updatedSource,
-        message: 'RSS kaynağı başarıyla güncellendi',
+        message: RSS_SUCCESS_MESSAGES.SOURCE_UPDATED,
       };
     } catch (error) {
       console.error('Error in updateRssSource service:', error);
       return {
         success: false,
-        error: 'RSS kaynağı güncelleme işlemi sırasında bir hata oluştu',
+        error: RSS_ERROR_MESSAGES.OPERATION_FAILED,
       };
     }
   }
@@ -277,7 +281,7 @@ export class RssService {
       if (!existingSource) {
         return {
           success: false,
-          error: 'RSS kaynağı bulunamadı',
+          error: RSS_ERROR_MESSAGES.SOURCE_NOT_FOUND,
         };
       }
 
@@ -287,19 +291,19 @@ export class RssService {
       if (!deleted) {
         return {
           success: false,
-          error: 'RSS kaynağı silinemedi',
+          error: RSS_ERROR_MESSAGES.SOURCE_DELETE_FAILED,
         };
       }
 
       return {
         success: true,
-        message: 'RSS kaynağı başarıyla silindi',
+        message: RSS_SUCCESS_MESSAGES.SOURCE_DELETED,
       };
     } catch (error) {
       console.error('Error in deleteRssSource service:', error);
       return {
         success: false,
-        error: 'RSS kaynağı silme işlemi sırasında bir hata oluştu',
+        error: RSS_ERROR_MESSAGES.OPERATION_FAILED,
       };
     }
   }
@@ -333,7 +337,7 @@ export class RssService {
       if (sources.length === 0) {
         return {
           success: false,
-          error: 'Aktif RSS kaynağı bulunamadı',
+          error: RSS_ERROR_MESSAGES.SOURCE_NOT_FOUND,
         };
       }
 
@@ -369,13 +373,13 @@ export class RssService {
           results,
           execution_time: executionTime,
         },
-        message: `${successfulSources}/${sources.length} RSS kaynağından ${newItems} yeni haber çekildi`,
+        message: RSS_SUCCESS_MESSAGES.FEEDS_FETCHED,
       };
     } catch (error) {
       console.error('Error in fetchRssFeeds service:', error);
       return {
         success: false,
-        error: 'RSS feed çekme işlemi sırasında bir hata oluştu',
+        error: RSS_ERROR_MESSAGES.FEED_FETCH_FAILED,
       };
     }
   }
@@ -413,7 +417,7 @@ export class RssService {
           success: false,
           items_count: 0,
           new_items_count: 0,
-          error: 'RSS feed\'de haber bulunamadı',
+          error: RSS_ERROR_MESSAGES.FEED_PARSE_FAILED,
           fetch_time: Date.now() - startTime,
         };
       }

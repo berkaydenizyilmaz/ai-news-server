@@ -19,6 +19,10 @@ import {
   RssSourceQueryInput,
   RssFetchInput
 } from './rss.validation';
+import { 
+  RSS_ERROR_MESSAGES,
+  RSS_VALIDATION_MESSAGES 
+} from './rss.constants';
 import { HTTP_STATUS } from '@/core/constants';
 
 /**
@@ -51,7 +55,7 @@ export class RssController {
       if (!validationResult.success) {
         res.status(HTTP_STATUS.BAD_REQUEST).json({
           success: false,
-          message: 'Geçersiz veri formatı',
+          message: RSS_ERROR_MESSAGES.INVALID_DATA_FORMAT,
           errors: validationResult.error.errors.map(err => ({
             field: err.path.join('.'),
             message: err.message,
@@ -66,7 +70,7 @@ export class RssController {
       if (!createdBy) {
         res.status(HTTP_STATUS.UNAUTHORIZED).json({
           success: false,
-          message: 'Yetkilendirme gerekli',
+          message: RSS_ERROR_MESSAGES.UNAUTHORIZED,
         });
         return;
       }
@@ -111,7 +115,7 @@ export class RssController {
       if (!validationResult.success) {
         res.status(HTTP_STATUS.BAD_REQUEST).json({
           success: false,
-          message: 'Geçersiz sorgu parametreleri',
+          message: RSS_ERROR_MESSAGES.INVALID_QUERY_PARAMS,
           errors: validationResult.error.errors.map(err => ({
             field: err.path.join('.'),
             message: err.message,
@@ -161,7 +165,7 @@ export class RssController {
       if (!validationResult.success) {
         res.status(HTTP_STATUS.BAD_REQUEST).json({
           success: false,
-          message: 'Geçersiz RSS kaynak ID',
+          message: RSS_ERROR_MESSAGES.INVALID_SOURCE_ID,
           errors: validationResult.error.errors.map(err => ({
             field: err.path.join('.'),
             message: err.message,
@@ -212,7 +216,7 @@ export class RssController {
       if (!paramsValidation.success) {
         res.status(HTTP_STATUS.BAD_REQUEST).json({
           success: false,
-          message: 'Geçersiz RSS kaynak ID',
+          message: RSS_ERROR_MESSAGES.INVALID_SOURCE_ID,
         });
         return;
       }
@@ -223,7 +227,7 @@ export class RssController {
       if (!bodyValidation.success) {
         res.status(HTTP_STATUS.BAD_REQUEST).json({
           success: false,
-          message: 'Geçersiz veri formatı',
+          message: RSS_ERROR_MESSAGES.INVALID_DATA_FORMAT,
           errors: bodyValidation.error.errors.map(err => ({
             field: err.path.join('.'),
             message: err.message,
@@ -280,7 +284,7 @@ export class RssController {
       if (!validationResult.success) {
         res.status(HTTP_STATUS.BAD_REQUEST).json({
           success: false,
-          message: 'Geçersiz RSS kaynak ID',
+          message: RSS_ERROR_MESSAGES.INVALID_SOURCE_ID,
         });
         return;
       }
@@ -333,7 +337,7 @@ export class RssController {
       if (!validationResult.success) {
         res.status(HTTP_STATUS.BAD_REQUEST).json({
           success: false,
-          message: 'Geçersiz veri formatı',
+          message: RSS_ERROR_MESSAGES.INVALID_DATA_FORMAT,
           errors: validationResult.error.errors.map(err => ({
             field: err.path.join('.'),
             message: err.message,

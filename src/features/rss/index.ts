@@ -8,4 +8,5 @@
 export { rssRoutes } from './rss.routes';
 export { RssService } from './rss.service';
 export * from './rss.types';
-export * from './rss.validation'; 
+export * from './rss.validation';
+export * from './rss.constants'; 
