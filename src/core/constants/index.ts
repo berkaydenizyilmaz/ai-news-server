@@ -1,44 +1,60 @@
 /**
- * Core Constants
+ * Core Constants Index
  * 
- * Bu dosya, uygulama için genel sabitleri içerir.
- * HTTP durum kodları, kullanıcı rollerinin sabit tanımları, ayar kategorileri ve log seviyeleri gibi sabit değerleri içerir.
+ * Tüm core constants dosyalarını tek bir yerden export eder.
+ * Organize edilmiş constants yapısının merkezi giriş noktası.
+ * 
  */
 
-// HTTP Status Codes
-export const HTTP_STATUS = {
-  OK: 200,
-  CREATED: 201,
-  BAD_REQUEST: 400,
-  UNAUTHORIZED: 401,
-  FORBIDDEN: 403,
-  NOT_FOUND: 404,
-  CONFLICT: 409,
-  INTERNAL_SERVER_ERROR: 500,
-} as const;
+// ==================== HTTP CONSTANTS ====================
+export {
+  HTTP_STATUS,
+  HTTP_METHODS,
+  CONTENT_TYPES,
+} from './http.constants';
 
-// User Roles
-export const USER_ROLES = {
-  VISITOR: 'visitor',
-  USER: 'user',
-  MODERATOR: 'moderator',
-  ADMIN: 'admin',
-} as const;
+// ==================== USER CONSTANTS ====================
+export {
+  USER_ROLES,
+  USER_ROLE_HIERARCHY,
+  USER_STATUS,
+  USER_PERMISSIONS,
+  ROLE_PERMISSIONS,
+} from './user.constants';
 
-// Setting Categories
-export const SETTING_CATEGORIES = {
-  GENERAL: 'general',
-  RSS: 'rss',
-  AI: 'ai',
-  AUTH: 'auth',
-  NEWS: 'news',
-  FORUM: 'forum',
-} as const;
+// ==================== SYSTEM CONSTANTS ====================
+export {
+  SETTING_CATEGORIES,
+  LOG_LEVELS,
+  LOG_LEVEL_HIERARCHY,
+  SYSTEM_MODULES,
+  ENVIRONMENT_TYPES,
+  CACHE_KEYS,
+  CACHE_TTL,
+  PAGINATION_DEFAULTS,
+  FILE_UPLOAD_LIMITS,
+  AI_EMBEDDING_CONFIG,
+  WEB_SCRAPING_CONFIG,
+} from './system.constants';
 
-// Log Levels
-export const LOG_LEVELS = {
-  INFO: 'info',
-  WARNING: 'warning',
-  ERROR: 'error',
-  DEBUG: 'debug',
-} as const;
+// ==================== VALIDATION CONSTANTS ====================
+export {
+  REGEX_PATTERNS,
+  STRING_CONSTRAINTS,
+  NUMERIC_CONSTRAINTS,
+  FILE_CONSTRAINTS,
+  DATE_CONSTRAINTS,
+  VALIDATION_ERROR_MESSAGES,
+} from './validation.constants';
+
+// ==================== AUTH CONSTANTS ====================
+export {
+  AUTH_ERROR_MESSAGES,
+  AUTH_SUCCESS_MESSAGES,
+  TOKEN_CONFIG,
+} from './auth.constants';
+
+// ==================== MIDDLEWARE CONSTANTS ====================
+export {
+  ERROR_HANDLER_MESSAGES,
+} from './middleware.constants';

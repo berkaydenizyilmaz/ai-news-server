@@ -10,6 +10,7 @@ import { supabaseAdmin } from '@/database';
 import { Log, LogLevel, LogModule } from '@/core/types/database.types';
 import { CreateLogRequest, GetLogsQuery } from './log.types';
 import { QUERY_CONSTRAINTS, DATE_CONSTRAINTS, DB_CONSTRAINTS } from './log.constants';
+import { LOG_LEVELS } from '@/core/constants';
 
 /**
  * Log Model Class
@@ -259,7 +260,7 @@ export class LogModel {
       const { data: recentErrors } = await supabaseAdmin
         .from('logs')
         .select('*')
-        .eq('level', 'error')
+        .eq('level', LOG_LEVELS.ERROR)
         .order('created_at', { ascending: false })
         .limit(DB_CONSTRAINTS.RECENT_ERRORS_LIMIT);
 

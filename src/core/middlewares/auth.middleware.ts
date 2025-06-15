@@ -8,7 +8,12 @@
 
 import { Response, NextFunction } from 'express';
 import { AuthService } from '@/features/auth/auth.service';
-import { HTTP_STATUS } from '@/core/constants';
+import { 
+  HTTP_STATUS, 
+  USER_ROLES, 
+  AUTH_ERROR_MESSAGES, 
+  TOKEN_CONFIG 
+} from '@/core/constants';
 import { Request } from '@/core/types';
 
 /**
@@ -24,22 +29,22 @@ import { Request } from '@/core/types';
  */
 export const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
   try {
-    const authHeader = req.headers.authorization;
+    const authHeader = req.headers[TOKEN_CONFIG.HEADER_NAME];
     
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    if (!authHeader || !authHeader.startsWith(TOKEN_CONFIG.BEARER_PREFIX)) {
       return res.status(HTTP_STATUS.UNAUTHORIZED).json({
         success: false,
-        message: 'Token bulunamadı',
+        message: AUTH_ERROR_MESSAGES.TOKEN_NOT_FOUND,
       });
     }
 
-    const token = authHeader.substring(7); // "Bearer " kısmını çıkar
+    const token = authHeader.substring(TOKEN_CONFIG.BEARER_PREFIX_LENGTH);
     const decoded = AuthService.verifyToken(token);
 
     if (!decoded) {
       return res.status(HTTP_STATUS.UNAUTHORIZED).json({
         success: false,
-        message: 'Geçersiz token',
+        message: AUTH_ERROR_MESSAGES.INVALID_TOKEN,
       });
     }
 
@@ -49,7 +54,7 @@ export const authMiddleware = (req: Request, res: Response, next: NextFunction) 
   } catch (error) {
     return res.status(HTTP_STATUS.UNAUTHORIZED).json({
       success: false,
-      message: 'Token doğrulama hatası',
+      message: AUTH_ERROR_MESSAGES.TOKEN_VERIFICATION_FAILED,
     });
   }
 };
@@ -70,14 +75,14 @@ export const requireRole = (roles: string[]) => {
     if (!req.user) {
       return res.status(HTTP_STATUS.UNAUTHORIZED).json({
         success: false,
-        message: 'Kimlik doğrulama gerekli',
+        message: AUTH_ERROR_MESSAGES.AUTHENTICATION_REQUIRED,
       });
     }
 
     if (!roles.includes(req.user.role)) {
       return res.status(HTTP_STATUS.FORBIDDEN).json({
         success: false,
-        message: 'Bu işlem için yetkiniz yok',
+        message: AUTH_ERROR_MESSAGES.INSUFFICIENT_PERMISSIONS,
       });
     }
 
@@ -90,11 +95,11 @@ export const requireRole = (roles: string[]) => {
  * 
  * Sadece admin rolüne sahip kullanıcıların erişimine izin verir.
  */
-export const requireAdmin = requireRole(['admin']);
+export const requireAdmin = requireRole([USER_ROLES.ADMIN]);
 
 /**
  * Moderator Authorization Middleware
  * 
  * Moderator veya admin rolüne sahip kullanıcıların erişimine izin verir.
  */
-export const requireModerator = requireRole(['moderator', 'admin']); 
+export const requireModerator = requireRole([USER_ROLES.MODERATOR, USER_ROLES.ADMIN]); 

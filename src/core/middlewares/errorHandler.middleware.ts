@@ -8,6 +8,11 @@
 
 import { Request, Response, NextFunction } from 'express';
 import config from '@/config';
+import { 
+  HTTP_STATUS, 
+  ENVIRONMENT_TYPES, 
+  ERROR_HANDLER_MESSAGES 
+} from '@/core/constants';
 
 /**
  * API Error Interface
@@ -38,19 +43,19 @@ export const errorHandler = (
   res: Response,
   next: NextFunction
 ): void => {
-  const statusCode = err.statusCode || 500;
-  const message = err.message || 'Internal Server Error';
+  const statusCode = err.statusCode || HTTP_STATUS.INTERNAL_SERVER_ERROR;
+  const message = err.message || ERROR_HANDLER_MESSAGES.INTERNAL_SERVER_ERROR;
   
   // Development ortamında stack trace göster
   const response: any = {
     success: false,
     message,
-    ...(config.nodeEnv === 'development' && { stack: err.stack }),
+    ...(config.nodeEnv === ENVIRONMENT_TYPES.DEVELOPMENT && { stack: err.stack }),
   };
   
   // Log the error
   console.error(`Error ${statusCode}: ${message}`);
-  if (config.nodeEnv === 'development') {
+  if (config.nodeEnv === ENVIRONMENT_TYPES.DEVELOPMENT) {
     console.error(err.stack);
   }
   
@@ -67,7 +72,7 @@ export const errorHandler = (
  * @param statusCode - HTTP durum kodu (default: 500)
  * @returns {ApiError} Özelleştirilmiş hata nesnesi
  */
-export const createError = (message: string, statusCode: number = 500): ApiError => {
+export const createError = (message: string, statusCode: number = HTTP_STATUS.INTERNAL_SERVER_ERROR): ApiError => {
   const error: ApiError = new Error(message);
   error.statusCode = statusCode;
   error.isOperational = true;

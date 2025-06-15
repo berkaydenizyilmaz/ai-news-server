@@ -16,7 +16,7 @@ import {
   GetLogsQueryInput,
   LogIdParamInput
 } from './log.validation';
-import { HTTP_STATUS } from '@/core/constants';
+import { HTTP_STATUS, USER_ROLES } from '@/core/constants';
 import { 
   LOG_VALIDATION_MESSAGES, 
   LOG_ERROR_MESSAGES, 
@@ -129,7 +129,7 @@ export class LogController {
       const query: GetLogsQueryInput = validationResult.data;
 
       // Kullanıcı rolünü kontrol et
-      const isAdmin = (req as any).user?.role === 'admin';
+      const isAdmin = (req as any).user?.role === USER_ROLES.ADMIN;
 
       // Servis katmanını çağır
       const result = await LogService.getLogs(query, isAdmin);
@@ -185,7 +185,7 @@ export class LogController {
       const { id }: LogIdParamInput = validationResult.data;
 
       // Kullanıcı rolünü kontrol et
-      const isAdmin = (req as any).user?.role === 'admin';
+      const isAdmin = (req as any).user?.role === USER_ROLES.ADMIN;
 
       // Servis katmanını çağır
       const result = await LogService.getLogById(id, isAdmin);
@@ -228,7 +228,7 @@ export class LogController {
   static async getLogStats(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       // Admin yetkisi kontrolü
-      if ((req as any).user?.role !== 'admin') {
+      if ((req as any).user?.role !== USER_ROLES.ADMIN) {
         res.status(HTTP_STATUS.FORBIDDEN).json({
           success: false,
           error: LOG_ERROR_MESSAGES.UNAUTHORIZED,
@@ -312,7 +312,7 @@ export class LogController {
 
       // Kullanıcı bilgilerini al
       const requestingUserId = (req as any).user?.userId;
-      const isAdmin = (req as any).user?.role === 'admin';
+      const isAdmin = (req as any).user?.role === USER_ROLES.ADMIN;
 
       // Servis katmanını çağır
       const result = await LogService.getUserLogs(
@@ -360,7 +360,7 @@ export class LogController {
   static async cleanOldLogs(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       // Admin yetkisi kontrolü
-      if ((req as any).user?.role !== 'admin') {
+      if ((req as any).user?.role !== USER_ROLES.ADMIN) {
         res.status(HTTP_STATUS.FORBIDDEN).json({
           success: false,
           error: LOG_ERROR_MESSAGES.UNAUTHORIZED,

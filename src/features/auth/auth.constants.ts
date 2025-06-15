@@ -56,11 +56,13 @@ export const JWT_CONSTANTS = {
 
 // ==================== USER ROLE CONSTANTS ====================
 
+import { USER_ROLES } from '@/core/constants';
+
 /**
  * Default User Role
  * Yeni kullanıcılar için varsayılan rol
  */
-export const DEFAULT_USER_ROLE = 'user' as const;
+export const DEFAULT_USER_ROLE = USER_ROLES.USER;
 
 /**
  * User Status Constants

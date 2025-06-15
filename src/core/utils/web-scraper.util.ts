@@ -8,6 +8,7 @@
 
 import * as cheerio from 'cheerio';
 import { ScrapedNewsContent, ScrapingResult } from '@/features/rss/rss.types';
+import { WEB_SCRAPING_CONFIG } from '@/core/constants';
 
 /**
  * Web Scraper Class
@@ -25,7 +26,7 @@ export class WebScraperUtil {
    * @param timeout - Timeout süresi (ms)
    * @returns {Promise<ScrapingResult>} Scraping sonucu
    */
-  static async scrapeNewsContent(url: string, timeout: number = 15000): Promise<ScrapingResult> {
+  static async scrapeNewsContent(url: string, timeout: number = WEB_SCRAPING_CONFIG.DEFAULT_TIMEOUT): Promise<ScrapingResult> {
     const startTime = Date.now();
     
     try {
@@ -33,10 +34,10 @@ export class WebScraperUtil {
       const response = await fetch(url, {
         method: 'GET',
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-          'Accept-Language': 'tr-TR,tr;q=0.9,en;q=0.8',
-          'Accept-Encoding': 'gzip, deflate, br',
+          'User-Agent': WEB_SCRAPING_CONFIG.USER_AGENT,
+          'Accept': WEB_SCRAPING_CONFIG.ACCEPT_HEADER,
+          'Accept-Language': WEB_SCRAPING_CONFIG.ACCEPT_LANGUAGE,
+          'Accept-Encoding': WEB_SCRAPING_CONFIG.ACCEPT_ENCODING,
           'DNT': '1',
           'Connection': 'keep-alive',
           'Upgrade-Insecure-Requests': '1',
@@ -143,7 +144,7 @@ export class WebScraperUtil {
 
     for (const selector of titleSelectors) {
       const title = $(selector).first().text().trim();
-      if (title && title.length > 5) {
+      if (title && title.length > WEB_SCRAPING_CONFIG.MIN_TITLE_LENGTH) {
         return this.cleanText(title);
       }
     }
@@ -181,7 +182,7 @@ export class WebScraperUtil {
         element.find('script, style, nav, aside, footer, .advertisement, .ads, .social-share').remove();
         
         const content = element.text().trim();
-        if (content && content.length > 100) {
+        if (content && content.length > WEB_SCRAPING_CONFIG.MIN_CONTENT_LENGTH) {
           return this.cleanText(content);
         }
       }

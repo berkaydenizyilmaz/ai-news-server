@@ -7,6 +7,7 @@
  */
 
 import config from '@/config';
+import { AI_EMBEDDING_CONFIG } from '@/core/constants';
 
 /**
  * Embedding Response Interface
@@ -38,9 +39,6 @@ interface SimilarityResult {
  */
 export class EmbeddingUtil {
   private static readonly HUGGING_FACE_API_URL = `${config.huggingFace.baseUrl}/models/${config.huggingFace.model}`;
-  private static readonly SIMILARITY_THRESHOLD = 0.85; // %85 benzerlik eşiği
-  private static readonly MAX_TEXT_LENGTH = 512; // Model limiti
-  private static readonly REQUEST_TIMEOUT = 30000; // 30 saniye
 
   /**
    * Generate Text Embedding
@@ -57,7 +55,7 @@ export class EmbeddingUtil {
       // Metni temizle ve kısalt
       const cleanedText = this.preprocessText(text);
       
-      if (!cleanedText || cleanedText.length < 10) {
+      if (!cleanedText || cleanedText.length < AI_EMBEDDING_CONFIG.MIN_TEXT_LENGTH) {
         return {
           success: false,
           error: 'Metin çok kısa veya geçersiz',
@@ -78,7 +76,7 @@ export class EmbeddingUtil {
             wait_for_model: true,
           },
         }),
-        signal: AbortSignal.timeout(this.REQUEST_TIMEOUT),
+        signal: AbortSignal.timeout(AI_EMBEDDING_CONFIG.REQUEST_TIMEOUT),
       });
 
       if (!response.ok) {
@@ -93,7 +91,7 @@ export class EmbeddingUtil {
       const embedding = await response.json();
 
       // API yanıtını kontrol et
-      if (!Array.isArray(embedding) || embedding.length !== 384) {
+      if (!Array.isArray(embedding) || embedding.length !== AI_EMBEDDING_CONFIG.VECTOR_DIMENSIONS) {
         return {
           success: false,
           error: 'Geçersiz embedding formatı',
@@ -165,7 +163,7 @@ export class EmbeddingUtil {
     vector2: number[], 
     customThreshold?: number
   ): SimilarityResult {
-    const threshold = customThreshold || this.SIMILARITY_THRESHOLD;
+    const threshold = customThreshold || AI_EMBEDDING_CONFIG.SIMILARITY_THRESHOLD;
     const similarity = this.calculateCosineSimilarity(vector1, vector2);
     
     return {
@@ -194,11 +192,11 @@ export class EmbeddingUtil {
       .trim();
 
     // Uzunluk kontrolü
-    if (cleaned.length > this.MAX_TEXT_LENGTH) {
+    if (cleaned.length > AI_EMBEDDING_CONFIG.MAX_TEXT_LENGTH) {
       // Metni kısalt ama kelime ortasında kesme
-      cleaned = cleaned.substring(0, this.MAX_TEXT_LENGTH);
+      cleaned = cleaned.substring(0, AI_EMBEDDING_CONFIG.MAX_TEXT_LENGTH);
       const lastSpaceIndex = cleaned.lastIndexOf(' ');
-      if (lastSpaceIndex > this.MAX_TEXT_LENGTH * 0.8) {
+      if (lastSpaceIndex > 0) {
         cleaned = cleaned.substring(0, lastSpaceIndex);
       }
     }
@@ -209,7 +207,7 @@ export class EmbeddingUtil {
   /**
    * Batch Generate Embeddings
    * 
-   * Birden fazla metin için embedding oluşturur.
+   * Birden fazla metin için toplu embedding oluşturur.
    * 
    * @param texts - Embedding oluşturulacak metinler
    * @param batchSize - Batch boyutu
@@ -217,32 +215,15 @@ export class EmbeddingUtil {
    */
   static async batchGenerateEmbeddings(
     texts: string[], 
-    batchSize: number = 5
+    batchSize: number = AI_EMBEDDING_CONFIG.BATCH_SIZE
   ): Promise<EmbeddingResponse[]> {
     const results: EmbeddingResponse[] = [];
     
     for (let i = 0; i < texts.length; i += batchSize) {
       const batch = texts.slice(i, i + batchSize);
       const batchPromises = batch.map(text => this.generateEmbedding(text));
-      
-      try {
-        const batchResults = await Promise.all(batchPromises);
-        results.push(...batchResults);
-        
-        // Rate limiting için kısa bekleme
-        if (i + batchSize < texts.length) {
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        }
-      } catch (error) {
-        console.error('Batch embedding error:', error);
-        
-        // Hatalı batch için boş sonuçlar ekle
-        const errorResults = batch.map(() => ({
-          success: false,
-          error: 'Batch işlemi başarısız',
-        }));
-        results.push(...errorResults);
-      }
+      const batchResults = await Promise.all(batchPromises);
+      results.push(...batchResults);
     }
     
     return results;
@@ -251,22 +232,22 @@ export class EmbeddingUtil {
   /**
    * Get Embedding Dimensions
    * 
-   * Kullanılan modelin embedding boyutunu döndürür.
+   * Embedding vector boyutunu döndürür.
    * 
-   * @returns {number} Embedding boyutu
+   * @returns {number} Vector boyutu
    */
   static getEmbeddingDimensions(): number {
-    return 384; // all-MiniLM-L6-v2 model boyutu
+    return AI_EMBEDDING_CONFIG.VECTOR_DIMENSIONS;
   }
 
   /**
    * Get Similarity Threshold
    * 
-   * Varsayılan similarity threshold'unu döndürür.
+   * Varsayılan benzerlik eşiğini döndürür.
    * 
-   * @returns {number} Similarity threshold
+   * @returns {number} Benzerlik eşiği
    */
   static getSimilarityThreshold(): number {
-    return this.SIMILARITY_THRESHOLD;
+    return AI_EMBEDDING_CONFIG.SIMILARITY_THRESHOLD;
   }
 } 
