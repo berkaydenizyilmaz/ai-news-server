@@ -17,6 +17,11 @@ import {
   LogIdParamInput
 } from './log.validation';
 import { HTTP_STATUS } from '@/core/constants';
+import { 
+  LOG_VALIDATION_MESSAGES, 
+  LOG_ERROR_MESSAGES, 
+  DATE_CONSTRAINTS 
+} from './log.constants';
 
 /**
  * Log Controller Class
@@ -47,7 +52,7 @@ export class LogController {
       if (!validationResult.success) {
         res.status(HTTP_STATUS.BAD_REQUEST).json({
           success: false,
-          message: 'Geçersiz veri formatı',
+          message: LOG_VALIDATION_MESSAGES.INVALID_DATA_FORMAT,
           errors: validationResult.error.errors.map(err => ({
             field: err.path.join('.'),
             message: err.message,
@@ -112,7 +117,7 @@ export class LogController {
       if (!validationResult.success) {
         res.status(HTTP_STATUS.BAD_REQUEST).json({
           success: false,
-          message: 'Geçersiz sorgu parametreleri',
+          message: LOG_VALIDATION_MESSAGES.INVALID_DATA_FORMAT,
           errors: validationResult.error.errors.map(err => ({
             field: err.path.join('.'),
             message: err.message,
@@ -168,7 +173,7 @@ export class LogController {
       if (!validationResult.success) {
         res.status(HTTP_STATUS.BAD_REQUEST).json({
           success: false,
-          message: 'Geçersiz log ID\'si',
+          message: LOG_VALIDATION_MESSAGES.INVALID_LOG_ID,
           errors: validationResult.error.errors.map(err => ({
             field: err.path.join('.'),
             message: err.message,
@@ -192,7 +197,7 @@ export class LogController {
           message: result.message,
         });
       } else {
-        const statusCode = result.error === 'Log kaydı bulunamadı' 
+        const statusCode = result.error?.includes('bulunamadı') 
           ? HTTP_STATUS.NOT_FOUND 
           : HTTP_STATUS.BAD_REQUEST;
         res.status(statusCode).json({
@@ -226,13 +231,13 @@ export class LogController {
       if ((req as any).user?.role !== 'admin') {
         res.status(HTTP_STATUS.FORBIDDEN).json({
           success: false,
-          error: 'Bu işlem için admin yetkisi gereklidir',
+          error: LOG_ERROR_MESSAGES.UNAUTHORIZED,
         });
         return;
       }
 
       // Days parametresini al (opsiyonel)
-      const days = req.query.days ? parseInt(req.query.days as string, 10) : 30;
+      const days = req.query.days ? parseInt(req.query.days as string, 10) : DATE_CONSTRAINTS.DEFAULT_STATS_DAYS;
 
       // Servis katmanını çağır
       const result = await LogService.getLogStats(days);
@@ -277,7 +282,7 @@ export class LogController {
       if (!userIdValidation.success) {
         res.status(HTTP_STATUS.BAD_REQUEST).json({
           success: false,
-          message: 'Geçersiz kullanıcı ID\'si',
+          message: LOG_VALIDATION_MESSAGES.INVALID_USER_ID,
           errors: userIdValidation.error.errors.map(err => ({
             field: err.path.join('.'),
             message: err.message,
@@ -294,7 +299,7 @@ export class LogController {
       if (!queryValidation.success) {
         res.status(HTTP_STATUS.BAD_REQUEST).json({
           success: false,
-          message: 'Geçersiz sorgu parametreleri',
+          message: LOG_VALIDATION_MESSAGES.INVALID_DATA_FORMAT,
           errors: queryValidation.error.errors.map(err => ({
             field: err.path.join('.'),
             message: err.message,
@@ -324,7 +329,7 @@ export class LogController {
           message: result.message,
         });
       } else {
-        const statusCode = result.error?.includes('yetkiniz yok') 
+        const statusCode = result.error?.includes('yetkiniz') 
           ? HTTP_STATUS.FORBIDDEN 
           : HTTP_STATUS.BAD_REQUEST;
         res.status(statusCode).json({
@@ -358,13 +363,13 @@ export class LogController {
       if ((req as any).user?.role !== 'admin') {
         res.status(HTTP_STATUS.FORBIDDEN).json({
           success: false,
-          error: 'Bu işlem için admin yetkisi gereklidir',
+          error: LOG_ERROR_MESSAGES.UNAUTHORIZED,
         });
         return;
       }
 
       // Days parametresini al
-      const days = req.body.days ? parseInt(req.body.days, 10) : 90;
+      const days = req.body.days ? parseInt(req.body.days, 10) : DATE_CONSTRAINTS.DEFAULT_CLEANUP_DAYS;
 
       // Servis katmanını çağır
       const result = await LogService.cleanOldLogs(days);

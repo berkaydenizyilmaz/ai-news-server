@@ -7,20 +7,14 @@
  */
 
 import { z } from 'zod';
-
-// ==================== VALIDATION CONSTANTS ====================
-
-// Log mesajı için minimum/maksimum değerler
-const MESSAGE_MIN_LENGTH = 1;
-const MESSAGE_MAX_LENGTH = 2000;
-const MODULE_MAX_LENGTH = 50;
-const ACTION_MAX_LENGTH = 100;
-
-// Geçerli log seviyeleri
-const LOG_LEVELS = ['info', 'warning', 'error', 'debug'] as const;
-
-// Geçerli log modülleri
-const LOG_MODULES = ['auth', 'rss', 'news', 'settings', 'forum', 'users', 'reports', 'notification'] as const;
+import { 
+  MESSAGE_CONSTRAINTS,
+  MODULE_ACTION_CONSTRAINTS,
+  QUERY_CONSTRAINTS,
+  LOG_LEVELS,
+  LOG_MODULES,
+  LOG_VALIDATION_MESSAGES 
+} from './log.constants';
 
 // ==================== VALIDATION SCHEMAS ====================
 
@@ -37,24 +31,24 @@ const LOG_MODULES = ['auth', 'rss', 'news', 'settings', 'forum', 'users', 'repor
 export const createLogSchema = z.object({
   level: z
     .enum(LOG_LEVELS, {
-      errorMap: () => ({ message: 'Geçerli bir log seviyesi seçiniz (info, warning, error, debug)' })
+      errorMap: () => ({ message: LOG_VALIDATION_MESSAGES.INVALID_LOG_LEVEL })
     }),
   
   message: z
     .string()
-    .min(MESSAGE_MIN_LENGTH, 'Log mesajı boş olamaz')
-    .max(MESSAGE_MAX_LENGTH, `Log mesajı en fazla ${MESSAGE_MAX_LENGTH} karakter olabilir`)
+    .min(MESSAGE_CONSTRAINTS.MIN_LENGTH, LOG_VALIDATION_MESSAGES.MESSAGE_REQUIRED)
+    .max(MESSAGE_CONSTRAINTS.MAX_LENGTH, LOG_VALIDATION_MESSAGES.MESSAGE_TOO_LONG)
     .trim(),
   
   module: z
     .enum(LOG_MODULES, {
-      errorMap: () => ({ message: 'Geçerli bir modül seçiniz (auth, rss, news, settings, forum, users, reports, notification)' })
+      errorMap: () => ({ message: LOG_VALIDATION_MESSAGES.INVALID_MODULE })
     })
     .optional(),
   
   action: z
     .string()
-    .max(ACTION_MAX_LENGTH, `Aksiyon adı en fazla ${ACTION_MAX_LENGTH} karakter olabilir`)
+    .max(MODULE_ACTION_CONSTRAINTS.ACTION_MAX_LENGTH, LOG_VALIDATION_MESSAGES.ACTION_TOO_LONG)
     .trim()
     .optional(),
   
@@ -71,7 +65,7 @@ export const createLogSchema = z.object({
           return false;
         }
       },
-      { message: 'Metadata geçerli bir JSON objesi olmalıdır' }
+      { message: LOG_VALIDATION_MESSAGES.INVALID_METADATA }
     ),
 });
 
@@ -91,15 +85,15 @@ export const getLogsQuerySchema = z.object({
   page: z
     .string()
     .optional()
-    .transform((val) => val ? parseInt(val, 10) : 1)
-    .refine((val) => val > 0, { message: 'Sayfa numarası pozitif olmalıdır' }),
+    .transform((val) => val ? parseInt(val, 10) : QUERY_CONSTRAINTS.PAGE_MIN)
+    .refine((val) => val > 0, { message: LOG_VALIDATION_MESSAGES.INVALID_PAGE }),
   
   limit: z
     .string()
     .optional()
-    .transform((val) => val ? parseInt(val, 10) : 50)
-    .refine((val) => val >= 1 && val <= 100, { 
-      message: 'Limit 1-100 arasında olmalıdır' 
+    .transform((val) => val ? parseInt(val, 10) : QUERY_CONSTRAINTS.LIMIT_DEFAULT)
+    .refine((val) => val >= QUERY_CONSTRAINTS.LIMIT_MIN && val <= QUERY_CONSTRAINTS.LIMIT_MAX, { 
+      message: LOG_VALIDATION_MESSAGES.INVALID_LIMIT 
     }),
   
   level: z
@@ -112,28 +106,28 @@ export const getLogsQuerySchema = z.object({
   
   action: z
     .string()
-    .max(ACTION_MAX_LENGTH, `Aksiyon adı en fazla ${ACTION_MAX_LENGTH} karakter olabilir`)
+    .max(MODULE_ACTION_CONSTRAINTS.ACTION_MAX_LENGTH, LOG_VALIDATION_MESSAGES.ACTION_TOO_LONG)
     .trim()
     .optional(),
   
   user_id: z
     .string()
-    .uuid('Geçerli bir kullanıcı ID\'si giriniz')
+    .uuid(LOG_VALIDATION_MESSAGES.INVALID_USER_ID)
     .optional(),
   
   start_date: z
     .string()
-    .datetime('Geçerli bir başlangıç tarihi giriniz (ISO format)')
+    .datetime(LOG_VALIDATION_MESSAGES.INVALID_START_DATE)
     .optional(),
   
   end_date: z
     .string()
-    .datetime('Geçerli bir bitiş tarihi giriniz (ISO format)')
+    .datetime(LOG_VALIDATION_MESSAGES.INVALID_END_DATE)
     .optional(),
   
   search: z
     .string()
-    .max(200, 'Arama terimi en fazla 200 karakter olabilir')
+    .max(QUERY_CONSTRAINTS.SEARCH_MAX_LENGTH, LOG_VALIDATION_MESSAGES.SEARCH_TOO_LONG)
     .trim()
     .optional(),
 }).refine(
@@ -144,7 +138,7 @@ export const getLogsQuerySchema = z.object({
     return true;
   },
   {
-    message: 'Başlangıç tarihi bitiş tarihinden önce olmalıdır',
+    message: LOG_VALIDATION_MESSAGES.INVALID_DATE_RANGE,
     path: ['start_date']
   }
 );
@@ -158,7 +152,7 @@ export const getLogsQuerySchema = z.object({
 export const logIdParamSchema = z.object({
   id: z
     .string()
-    .uuid('Geçerli bir log ID\'si giriniz'),
+    .uuid(LOG_VALIDATION_MESSAGES.INVALID_LOG_ID),
 });
 
 // ==================== TYPE INFERENCE ====================

@@ -9,6 +9,7 @@
 import { supabaseAdmin } from '@/database';
 import { Log, LogLevel, LogModule } from '@/core/types/database.types';
 import { CreateLogRequest, GetLogsQuery } from './log.types';
+import { QUERY_CONSTRAINTS, DATE_CONSTRAINTS, DB_CONSTRAINTS } from './log.constants';
 
 /**
  * Log Model Class
@@ -89,8 +90,8 @@ export class LogModel {
   ): Promise<{ logs: Log[], total: number } | null> {
     try {
       const {
-        page = 1,
-        limit = 50,
+        page = QUERY_CONSTRAINTS.PAGE_MIN,
+        limit = QUERY_CONSTRAINTS.LIMIT_DEFAULT,
         level,
         module,
         action,
@@ -216,7 +217,7 @@ export class LogModel {
    * @param days - Kaç günlük veri (default: 30)
    * @returns Promise<object | null>
    */
-  static async getLogStats(days: number = 30): Promise<any | null> {
+  static async getLogStats(days: number = DATE_CONSTRAINTS.DEFAULT_STATS_DAYS): Promise<any | null> {
     try {
       const startDate = new Date();
       startDate.setDate(startDate.getDate() - days);
@@ -260,7 +261,7 @@ export class LogModel {
         .select('*')
         .eq('level', 'error')
         .order('created_at', { ascending: false })
-        .limit(10);
+        .limit(DB_CONSTRAINTS.RECENT_ERRORS_LIMIT);
 
       // En çok yapılan aksiyonlar
       const { data: actionStats } = await supabaseAdmin
@@ -279,7 +280,7 @@ export class LogModel {
       const topActions = Object.entries(actionCounts)
         .map(([action, count]) => ({ action, count }))
         .sort((a, b) => b.count - a.count)
-        .slice(0, 10);
+        .slice(0, DB_CONSTRAINTS.TOP_ACTIONS_LIMIT);
 
       return {
         totalLogs: totalLogs || 0,
@@ -308,7 +309,7 @@ export class LogModel {
    * @param days - Kaç günden eski kayıtlar silinecek
    * @returns Promise<number> - Silinen kayıt sayısı
    */
-  static async cleanOldLogs(days: number = 90): Promise<number> {
+  static async cleanOldLogs(days: number = DATE_CONSTRAINTS.DEFAULT_CLEANUP_DAYS): Promise<number> {
     try {
       const cutoffDate = new Date();
       cutoffDate.setDate(cutoffDate.getDate() - days);

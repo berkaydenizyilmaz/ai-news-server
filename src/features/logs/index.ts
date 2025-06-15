@@ -10,4 +10,5 @@ export { LogController } from './log.controller';
 export { LogService } from './log.service';
 export { LogModel } from './log.model';
 export * from './log.types';
-export * from './log.validation'; 
+export * from './log.validation';
+export * from './log.constants'; 

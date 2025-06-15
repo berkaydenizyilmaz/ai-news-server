@@ -17,6 +17,12 @@ import {
   AdminLogResponse
 } from './log.types';
 import { LogModule } from '@/core/types/database.types';
+import { 
+  QUERY_CONSTRAINTS,
+  DATE_CONSTRAINTS,
+  LOG_ERROR_MESSAGES,
+  LOG_SUCCESS_MESSAGES 
+} from './log.constants';
 
 /**
  * Log Service Class
@@ -57,13 +63,13 @@ export class LogService {
         action: logData.action?.trim(),
       };
 
-      // Metadata boyutunu kontrol et (max 1MB)
+      // Metadata boyutunu kontrol et
       if (cleanedLogData.metadata) {
         const metadataSize = JSON.stringify(cleanedLogData.metadata).length;
-        if (metadataSize > 1024 * 1024) { // 1MB
+        if (metadataSize > QUERY_CONSTRAINTS.METADATA_MAX_SIZE) {
           return {
             success: false,
-            error: 'Metadata boyutu çok büyük (maksimum 1MB)',
+            error: LOG_ERROR_MESSAGES.METADATA_TOO_LARGE,
           };
         }
       }
@@ -79,7 +85,7 @@ export class LogService {
       if (!createdLog) {
         return {
           success: false,
-          error: 'Log kaydı oluşturulamadı',
+          error: LOG_ERROR_MESSAGES.LOG_CREATION_FAILED,
         };
       }
 
@@ -99,13 +105,13 @@ export class LogService {
       return {
         success: true,
         data: logResponse,
-        message: 'Log kaydı başarıyla oluşturuldu',
+        message: LOG_SUCCESS_MESSAGES.LOG_CREATED,
       };
     } catch (error) {
       console.error('Error in createLog service:', error);
       return {
         success: false,
-        error: 'Log kaydı oluşturulurken bir hata oluştu',
+        error: LOG_ERROR_MESSAGES.LOG_CREATION_FAILED,
       };
     }
   }
@@ -132,12 +138,12 @@ export class LogService {
       if (!result) {
         return {
           success: false,
-          error: 'Log listesi getirilemedi',
+          error: LOG_ERROR_MESSAGES.LOGS_FETCH_FAILED,
         };
       }
 
       const { logs, total } = result;
-      const { page = 1, limit = 50 } = query;
+      const { page = QUERY_CONSTRAINTS.PAGE_MIN, limit = QUERY_CONSTRAINTS.LIMIT_DEFAULT } = query;
 
       // Pagination bilgilerini hesapla
       const totalPages = Math.ceil(total / limit);
@@ -169,13 +175,13 @@ export class LogService {
       return {
         success: true,
         data: response,
-        message: `${logs.length} log kaydı getirildi`,
+        message: LOG_SUCCESS_MESSAGES.LOGS_FETCHED,
       };
     } catch (error) {
       console.error('Log service getLogs hatası:', error);
       return {
         success: false,
-        error: 'Log listesi getirilirken bir hata oluştu',
+        error: LOG_ERROR_MESSAGES.LOGS_FETCH_FAILED,
       };
     }
   }
@@ -200,7 +206,7 @@ export class LogService {
       if (!log) {
         return {
           success: false,
-          error: 'Log kaydı bulunamadı',
+          error: LOG_ERROR_MESSAGES.LOG_NOT_FOUND,
         };
       }
 
@@ -209,21 +215,21 @@ export class LogService {
         return {
           success: true,
           data: log as AdminLogResponse,
-          message: 'Log kaydı getirildi',
+          message: LOG_SUCCESS_MESSAGES.LOG_FETCHED,
         };
       } else {
         const { ip_address, user_agent, request_id, ...publicLog } = log;
         return {
           success: true,
           data: publicLog as LogResponse,
-          message: 'Log kaydı getirildi',
+          message: LOG_SUCCESS_MESSAGES.LOG_FETCHED,
         };
       }
     } catch (error) {
       console.error('Log service getLogById hatası:', error);
       return {
         success: false,
-        error: 'Log kaydı getirilirken bir hata oluştu',
+        error: LOG_ERROR_MESSAGES.LOG_NOT_FOUND,
       };
     }
   }
@@ -237,7 +243,7 @@ export class LogService {
    * @param days - Kaç günlük veri (default: 30)
    * @returns Promise<LogServiceResponse<LogStatsResponse>>
    */
-  static async getLogStats(days: number = 30): Promise<LogServiceResponse<LogStatsResponse>> {
+  static async getLogStats(days: number = DATE_CONSTRAINTS.DEFAULT_STATS_DAYS): Promise<LogServiceResponse<LogStatsResponse>> {
     try {
       // Gün sayısını kontrol et
       if (days < 1 || days > 365) {
@@ -252,20 +258,20 @@ export class LogService {
       if (!stats) {
         return {
           success: false,
-          error: 'Log istatistikleri getirilemedi',
+          error: LOG_ERROR_MESSAGES.STATS_FETCH_FAILED,
         };
       }
 
       return {
         success: true,
         data: stats as LogStatsResponse,
-        message: `Son ${days} günün log istatistikleri getirildi`,
+        message: LOG_SUCCESS_MESSAGES.STATS_FETCHED,
       };
     } catch (error) {
       console.error('Log service getLogStats hatası:', error);
       return {
         success: false,
-        error: 'Log istatistikleri getirilirken bir hata oluştu',
+        error: LOG_ERROR_MESSAGES.STATS_FETCH_FAILED,
       };
     }
   }
@@ -279,20 +285,20 @@ export class LogService {
    * @param days - Kaç günden eski kayıtlar silinecek (default: 90)
    * @returns Promise<LogServiceResponse<{ deletedCount: number }>>
    */
-  static async cleanOldLogs(days: number = 90): Promise<LogServiceResponse<{ deletedCount: number }>> {
+  static async cleanOldLogs(days: number = DATE_CONSTRAINTS.DEFAULT_CLEANUP_DAYS): Promise<LogServiceResponse<{ deletedCount: number }>> {
     try {
       // Gün sayısını kontrol et
-      if (days < 30) {
+      if (days < DATE_CONSTRAINTS.MIN_RETENTION_DAYS) {
         return {
           success: false,
-          error: 'Güvenlik için en az 30 günlük log tutulmalıdır',
+          error: LOG_ERROR_MESSAGES.MIN_RETENTION_ERROR,
         };
       }
 
-      if (days > 3650) { // 10 yıl
+      if (days > DATE_CONSTRAINTS.MAX_CLEANUP_DAYS) {
         return {
           success: false,
-          error: 'Maksimum 10 yıllık log temizlenebilir',
+          error: LOG_ERROR_MESSAGES.MAX_CLEANUP_ERROR,
         };
       }
 
@@ -307,7 +313,7 @@ export class LogService {
       console.error('Log service cleanOldLogs hatası:', error);
       return {
         success: false,
-        error: 'Log temizleme işlemi sırasında bir hata oluştu',
+        error: LOG_ERROR_MESSAGES.CLEANUP_FAILED,
       };
     }
   }
@@ -335,7 +341,7 @@ export class LogService {
       if (!isAdmin && requestingUserId !== userId) {
         return {
           success: false,
-          error: 'Bu kullanıcının log kayıtlarını görme yetkiniz yok',
+          error: LOG_ERROR_MESSAGES.UNAUTHORIZED,
         };
       }
 
@@ -350,7 +356,7 @@ export class LogService {
       console.error('Log service getUserLogs hatası:', error);
       return {
         success: false,
-        error: 'Kullanıcı log kayıtları getirilirken bir hata oluştu',
+        error: LOG_ERROR_MESSAGES.LOGS_FETCH_FAILED,
       };
     }
   }
