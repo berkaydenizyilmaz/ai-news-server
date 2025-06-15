@@ -1,62 +1,37 @@
 /**
  * Authentication Feature Constants
  * 
- * Auth modülü için tüm sabit değerleri içerir.
- * Validation, security ve business logic sabitleri.
+ * Auth modülü için özel sabit değerleri içerir.
+ * Genel sabitler core constants'tan import edilir.
  * 
  */
 
-// ==================== VALIDATION CONSTANTS ====================
+import { 
+  PASSWORD_CONSTRAINTS,
+  USERNAME_CONSTRAINTS,
+  EMAIL_CONSTRAINTS,
+  PASSWORD_SECURITY,
+  JWT_CONFIG,
+  AUTH_ERROR_MESSAGES,
+  AUTH_SUCCESS_MESSAGES,
+  USER_ROLES
+} from '@/core/constants';
 
-/**
- * Password Validation Constants
- * Şifre doğrulama için minimum/maksimum değerler
- */
-export const PASSWORD_CONSTRAINTS = {
-  MIN_LENGTH: 6,
-  MAX_LENGTH: 30,
-} as const;
+// ==================== IMPORTED CONSTANTS ====================
 
-/**
- * Username Validation Constants
- * Kullanıcı adı doğrulama için minimum/maksimum değerler
- */
-export const USERNAME_CONSTRAINTS = {
-  MIN_LENGTH: 3,
-  MAX_LENGTH: 30,
-  REGEX: /^[a-zA-Z0-9]+$/,
-} as const;
+// Validation constraints - core constants'tan import edildi
+export { PASSWORD_CONSTRAINTS, USERNAME_CONSTRAINTS, EMAIL_CONSTRAINTS };
 
-/**
- * Email Validation Constants
- * Email doğrulama için sabitler
- */
-export const EMAIL_CONSTRAINTS = {
-  MAX_LENGTH: 255,
-} as const;
+// Security constants - core constants'tan import edildi
+export { PASSWORD_SECURITY };
 
-// ==================== SECURITY CONSTANTS ====================
+// JWT constants - core constants'tan import edildi
+export const JWT_CONSTANTS = JWT_CONFIG;
 
-/**
- * Password Hashing Constants
- * Bcrypt şifre hash'leme için güvenlik sabitleri
- */
-export const PASSWORD_SECURITY = {
-  SALT_ROUNDS: 12, // Yüksek güvenlik için 12 rounds
-} as const;
+// Auth messages - core constants'tan import edildi
+export { AUTH_ERROR_MESSAGES, AUTH_SUCCESS_MESSAGES };
 
-/**
- * JWT Token Constants
- * JWT token yönetimi için sabitler
- */
-export const JWT_CONSTANTS = {
-  DEFAULT_EXPIRES_IN: '7d',
-  ALGORITHM: 'HS256',
-} as const;
-
-// ==================== USER ROLE CONSTANTS ====================
-
-import { USER_ROLES } from '@/core/constants';
+// ==================== MODULE SPECIFIC CONSTANTS ====================
 
 /**
  * Default User Role
@@ -73,39 +48,11 @@ export const USER_STATUS = {
   INACTIVE: false,
 } as const;
 
-// ==================== ERROR MESSAGES ====================
-
-/**
- * Authentication Error Messages
- * Standart hata mesajları
- */
-export const AUTH_ERROR_MESSAGES = {
-  EMAIL_EXISTS: 'Bu email adresi zaten kullanılıyor',
-  USERNAME_EXISTS: 'Bu kullanıcı adı zaten kullanılıyor',
-  INVALID_CREDENTIALS: 'Email veya şifre hatalı',
-  USER_NOT_FOUND: 'Kullanıcı bulunamadı',
-  INVALID_CURRENT_PASSWORD: 'Mevcut şifre hatalı',
-  USER_CREATION_FAILED: 'Kullanıcı oluşturulamadı',
-  PASSWORD_UPDATE_FAILED: 'Şifre güncellenemedi',
-  UNAUTHORIZED: 'Yetkilendirme gerekli',
-} as const;
-
-/**
- * Authentication Success Messages
- * Standart başarı mesajları
- */
-export const AUTH_SUCCESS_MESSAGES = {
-  USER_CREATED: 'Kullanıcı başarıyla oluşturuldu',
-  LOGIN_SUCCESS: 'Giriş başarılı',
-  PASSWORD_CHANGED: 'Şifre başarıyla güncellendi',
-  LOGOUT_SUCCESS: 'Çıkış başarılı',
-} as const;
-
 // ==================== VALIDATION ERROR MESSAGES ====================
 
 /**
  * Validation Error Messages
- * Form validasyon hata mesajları
+ * Auth modülü için özel form validasyon hata mesajları
  */
 export const VALIDATION_MESSAGES = {
   EMAIL_REQUIRED: 'Email adresi zorunludur',

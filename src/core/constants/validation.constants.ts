@@ -65,6 +65,35 @@ export const STRING_CONSTRAINTS = {
   SLUG_MAX: 100,
 } as const;
 
+// ==================== AUTH VALIDATION CONSTRAINTS ====================
+
+/**
+ * Password Validation Constants
+ * Şifre doğrulama için minimum/maksimum değerler
+ */
+export const PASSWORD_CONSTRAINTS = {
+  MIN_LENGTH: 6,
+  MAX_LENGTH: 30,
+} as const;
+
+/**
+ * Username Validation Constants
+ * Kullanıcı adı doğrulama için minimum/maksimum değerler
+ */
+export const USERNAME_CONSTRAINTS = {
+  MIN_LENGTH: 3,
+  MAX_LENGTH: 30,
+  REGEX: /^[a-zA-Z0-9]+$/,
+} as const;
+
+/**
+ * Email Validation Constants
+ * Email doğrulama için sabitler
+ */
+export const EMAIL_CONSTRAINTS = {
+  MAX_LENGTH: 255,
+} as const;
+
 // ==================== NUMERIC CONSTRAINTS ====================
 
 /**

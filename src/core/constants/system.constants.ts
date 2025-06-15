@@ -78,6 +78,25 @@ export const ENVIRONMENT_TYPES = {
   PRODUCTION: 'production',
 } as const;
 
+// ==================== SECURITY CONFIGURATION ====================
+
+/**
+ * Password Security Configuration
+ * Şifre güvenliği için sabitler
+ */
+export const PASSWORD_SECURITY = {
+  SALT_ROUNDS: 12, // Yüksek güvenlik için 12 rounds
+} as const;
+
+/**
+ * JWT Configuration
+ * JWT token yönetimi için sabitler
+ */
+export const JWT_CONFIG = {
+  DEFAULT_EXPIRES_IN: '7d',
+  ALGORITHM: 'HS256',
+} as const;
+
 // ==================== CACHE KEYS ====================
 
 /**
