@@ -20,6 +20,11 @@ import {
   TokenPayload, 
   AuthServiceResponse 
 } from './auth.types';
+import { 
+  PASSWORD_SECURITY,
+  AUTH_ERROR_MESSAGES,
+  AUTH_SUCCESS_MESSAGES 
+} from './auth.constants';
 import { User } from '@/core/types/database.types';
 
 /**
@@ -55,19 +60,19 @@ export class AuthService {
       if (emailExists) {
         return {
           success: false,
-          error: 'Bu email adresi zaten kullanılıyor',
+          error: AUTH_ERROR_MESSAGES.EMAIL_EXISTS,
         };
       }
 
       if (usernameExists) {
         return {
           success: false,
-          error: 'Bu kullanıcı adı zaten kullanılıyor',
+          error: AUTH_ERROR_MESSAGES.USERNAME_EXISTS,
         };
       }
 
-      // Şifreyi güvenli şekilde hash'le - 12 rounds (yüksek güvenlik)
-      const saltRounds = 12;
+      // Şifreyi güvenli şekilde hash'le
+      const saltRounds = PASSWORD_SECURITY.SALT_ROUNDS;
       const password_hash = await bcrypt.hash(userData.password, saltRounds);
 
       // Kullanıcıyı veritabanında oluştur
@@ -79,7 +84,7 @@ export class AuthService {
       if (!user) {
         return {
           success: false,
-          error: 'Kullanıcı oluşturulamadı',
+          error: AUTH_ERROR_MESSAGES.USER_CREATION_FAILED,
         };
       }
 
@@ -95,7 +100,7 @@ export class AuthService {
           user: userWithoutPassword,
           token,
         },
-        message: 'Kullanıcı başarıyla oluşturuldu',
+        message: AUTH_SUCCESS_MESSAGES.USER_CREATED,
       };
     } catch (error) {
       console.error('Error in register service:', error);
@@ -128,7 +133,7 @@ export class AuthService {
       if (!user) {
         return {
           success: false,
-          error: 'Email veya şifre hatalı', // Güvenlik: Spesifik bilgi verme
+          error: AUTH_ERROR_MESSAGES.INVALID_CREDENTIALS, // Güvenlik: Spesifik bilgi verme
         };
       }
 
@@ -138,7 +143,7 @@ export class AuthService {
       if (!isPasswordValid) {
         return {
           success: false,
-          error: 'Email veya şifre hatalı', // Güvenlik: Spesifik bilgi verme
+          error: AUTH_ERROR_MESSAGES.INVALID_CREDENTIALS, // Güvenlik: Spesifik bilgi verme
         };
       }
 
@@ -157,7 +162,7 @@ export class AuthService {
           user: userWithoutPassword,
           token,
         },
-        message: 'Giriş başarılı',
+        message: AUTH_SUCCESS_MESSAGES.LOGIN_SUCCESS,
       };
     } catch (error) {
       console.error('Error in login service:', error);
@@ -194,7 +199,7 @@ export class AuthService {
       if (!user) {
         return {
           success: false,
-          error: 'Kullanıcı bulunamadı',
+          error: AUTH_ERROR_MESSAGES.USER_NOT_FOUND,
         };
       }
 
@@ -207,12 +212,12 @@ export class AuthService {
       if (!isCurrentPasswordValid) {
         return {
           success: false,
-          error: 'Mevcut şifre hatalı',
+          error: AUTH_ERROR_MESSAGES.INVALID_CURRENT_PASSWORD,
         };
       }
 
       // Yeni şifreyi güvenli şekilde hash'le
-      const saltRounds = 12;
+      const saltRounds = PASSWORD_SECURITY.SALT_ROUNDS;
       const newPasswordHash = await bcrypt.hash(passwordData.newPassword, saltRounds);
 
       // Veritabanında şifreyi güncelle
@@ -221,13 +226,13 @@ export class AuthService {
       if (!updated) {
         return {
           success: false,
-          error: 'Şifre güncellenemedi',
+          error: AUTH_ERROR_MESSAGES.PASSWORD_UPDATE_FAILED,
         };
       }
 
       return {
         success: true,
-        message: 'Şifre başarıyla güncellendi',
+        message: AUTH_SUCCESS_MESSAGES.PASSWORD_CHANGED,
       };
     } catch (error) {
       console.error('Error in changePassword service:', error);
@@ -256,7 +261,7 @@ export class AuthService {
       if (!user) {
         return {
           success: false,
-          error: 'Kullanıcı bulunamadı',
+          error: AUTH_ERROR_MESSAGES.USER_NOT_FOUND,
         };
       }
 

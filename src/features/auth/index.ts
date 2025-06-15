@@ -10,4 +10,5 @@ export { AuthController } from './auth.controller';
 export { AuthService } from './auth.service';
 export { AuthModel } from './auth.model';
 export * from './auth.types';
-export * from './auth.validation'; 
+export * from './auth.validation';
+export * from './auth.constants'; 

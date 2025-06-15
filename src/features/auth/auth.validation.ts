@@ -7,13 +7,11 @@
  */
 
 import { z } from 'zod';
-
-// ==================== VALIDATION CONSTANTS ====================
-
-// Şifre ve kullanıcı adı için minimum/maksimum değerler
-const PASSWORD_MIN_LENGTH = 6;
-const USERNAME_MIN_LENGTH = 3;
-const USERNAME_MAX_LENGTH = 50;
+import { 
+  PASSWORD_CONSTRAINTS, 
+  USERNAME_CONSTRAINTS, 
+  VALIDATION_MESSAGES 
+} from './auth.constants';
 
 // ==================== VALIDATION SCHEMAS ====================
 
@@ -28,20 +26,21 @@ const USERNAME_MAX_LENGTH = 50;
 export const registerSchema = z.object({
   email: z
     .string()
-    .email('Geçerli bir email adresi giriniz')
-    .min(1, 'Email adresi zorunludur'),
+    .email(VALIDATION_MESSAGES.EMAIL_INVALID)
+    .min(1, VALIDATION_MESSAGES.EMAIL_REQUIRED),
   
   password: z
     .string()
-    .min(PASSWORD_MIN_LENGTH, `Şifre en az ${PASSWORD_MIN_LENGTH} karakter olmalıdır`)
-    .min(1, 'Şifre zorunludur'),
+    .min(PASSWORD_CONSTRAINTS.MIN_LENGTH, VALIDATION_MESSAGES.PASSWORD_MIN_LENGTH)
+    .max(PASSWORD_CONSTRAINTS.MAX_LENGTH, VALIDATION_MESSAGES.PASSWORD_MAX_LENGTH)
+    .min(1, VALIDATION_MESSAGES.PASSWORD_REQUIRED),
   
   username: z
     .string()
-    .min(USERNAME_MIN_LENGTH, `Kullanıcı adı en az ${USERNAME_MIN_LENGTH} karakter olmalıdır`)
-    .max(USERNAME_MAX_LENGTH, `Kullanıcı adı en fazla ${USERNAME_MAX_LENGTH} karakter olmalıdır`)
-    .regex(/^[a-zA-Z0-9]+$/, 'Kullanıcı adı sadece harf ve rakam içerebilir')
-    .min(1, 'Kullanıcı adı zorunludur'),
+    .min(USERNAME_CONSTRAINTS.MIN_LENGTH, VALIDATION_MESSAGES.USERNAME_MIN_LENGTH)
+    .max(USERNAME_CONSTRAINTS.MAX_LENGTH, VALIDATION_MESSAGES.USERNAME_MAX_LENGTH)
+    .regex(USERNAME_CONSTRAINTS.REGEX, VALIDATION_MESSAGES.USERNAME_INVALID_CHARS)
+    .min(1, VALIDATION_MESSAGES.USERNAME_REQUIRED),
 });
 
 /**
@@ -54,12 +53,12 @@ export const registerSchema = z.object({
 export const loginSchema = z.object({
   email: z
     .string()
-    .email('Geçerli bir email adresi giriniz')
-    .min(1, 'Email adresi zorunludur'),
+    .email(VALIDATION_MESSAGES.EMAIL_INVALID)
+    .min(1, VALIDATION_MESSAGES.EMAIL_REQUIRED),
   
   password: z
     .string()
-    .min(1, 'Şifre zorunludur'),
+    .min(1, VALIDATION_MESSAGES.PASSWORD_REQUIRED),
 });
 
 /**
@@ -72,12 +71,13 @@ export const loginSchema = z.object({
 export const changePasswordSchema = z.object({
   currentPassword: z
     .string()
-    .min(1, 'Mevcut şifre zorunludur'),
+    .min(1, VALIDATION_MESSAGES.CURRENT_PASSWORD_REQUIRED),
   
   newPassword: z
     .string()
-    .min(PASSWORD_MIN_LENGTH, `Yeni şifre en az ${PASSWORD_MIN_LENGTH} karakter olmalıdır`)
-    .min(1, 'Yeni şifre zorunludur'),
+    .min(PASSWORD_CONSTRAINTS.MIN_LENGTH, VALIDATION_MESSAGES.PASSWORD_MIN_LENGTH)
+    .max(PASSWORD_CONSTRAINTS.MAX_LENGTH, VALIDATION_MESSAGES.PASSWORD_MAX_LENGTH)
+    .min(1, VALIDATION_MESSAGES.NEW_PASSWORD_REQUIRED),
 });
 
 /**
@@ -89,8 +89,8 @@ export const changePasswordSchema = z.object({
 export const forgotPasswordSchema = z.object({
   email: z
     .string()
-    .email('Geçerli bir email adresi giriniz')
-    .min(1, 'Email adresi zorunludur'),
+    .email(VALIDATION_MESSAGES.EMAIL_INVALID)
+    .min(1, VALIDATION_MESSAGES.EMAIL_REQUIRED),
 });
 
 /**
@@ -103,12 +103,13 @@ export const forgotPasswordSchema = z.object({
 export const resetPasswordSchema = z.object({
   token: z
     .string()
-    .min(1, 'Reset token zorunludur'),
+    .min(1, VALIDATION_MESSAGES.RESET_TOKEN_REQUIRED),
   
   newPassword: z
     .string()
-    .min(PASSWORD_MIN_LENGTH, `Şifre en az ${PASSWORD_MIN_LENGTH} karakter olmalıdır`)
-    .min(1, 'Şifre zorunludur'),
+    .min(PASSWORD_CONSTRAINTS.MIN_LENGTH, VALIDATION_MESSAGES.PASSWORD_MIN_LENGTH)
+    .max(PASSWORD_CONSTRAINTS.MAX_LENGTH, VALIDATION_MESSAGES.PASSWORD_MAX_LENGTH)
+    .min(1, VALIDATION_MESSAGES.PASSWORD_REQUIRED),
 });
 
 // ==================== TYPE INFERENCE ====================

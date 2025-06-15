@@ -9,6 +9,7 @@
 import { supabaseAdmin } from '@/database';
 import { User } from '@/core/types/database.types';
 import { RegisterInput } from './auth.validation';
+import { DEFAULT_USER_ROLE, USER_STATUS } from './auth.constants';
 
 /**
  * Authentication Model Class
@@ -38,8 +39,8 @@ export class AuthModel {
           email: userData.email,
           username: userData.username,
           password_hash: userData.password_hash,
-          role: 'user',
-          is_active: true,
+          role: DEFAULT_USER_ROLE,
+          is_active: USER_STATUS.ACTIVE,
         })
         .select()
         .single();

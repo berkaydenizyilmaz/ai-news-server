@@ -16,6 +16,11 @@ import {
   LoginInput,
   ChangePasswordInput
 } from './auth.validation';
+import { 
+  AUTH_SUCCESS_MESSAGES,
+  VALIDATION_MESSAGES,
+  AUTH_ERROR_MESSAGES 
+} from './auth.constants';
 import { HTTP_STATUS } from '@/core/constants';
 
 /**
@@ -47,7 +52,7 @@ export class AuthController {
       if (!validationResult.success) {
         res.status(HTTP_STATUS.BAD_REQUEST).json({
           success: false,
-          message: 'Geçersiz veri formatı',
+          message: VALIDATION_MESSAGES.INVALID_DATA_FORMAT,
           errors: validationResult.error.errors.map(err => ({
             field: err.path.join('.'),
             message: err.message,
@@ -100,7 +105,7 @@ export class AuthController {
       if (!validationResult.success) {
         res.status(HTTP_STATUS.BAD_REQUEST).json({
           success: false,
-          message: 'Geçersiz veri formatı',
+          message: VALIDATION_MESSAGES.INVALID_DATA_FORMAT,
           errors: validationResult.error.errors.map(err => ({
             field: err.path.join('.'),
             message: err.message,
@@ -152,7 +157,7 @@ export class AuthController {
       // Client-side'da token silinmeli
       res.status(HTTP_STATUS.OK).json({
         success: true,
-        message: 'Çıkış başarılı',
+        message: AUTH_SUCCESS_MESSAGES.LOGOUT_SUCCESS,
       });
     } catch (error) {
       console.error('Error in logout controller:', error);
@@ -182,7 +187,7 @@ export class AuthController {
       if (!userId) {
         res.status(HTTP_STATUS.UNAUTHORIZED).json({
           success: false,
-          message: 'Yetkilendirme gerekli',
+          message: AUTH_ERROR_MESSAGES.UNAUTHORIZED,
         });
         return;
       }
@@ -229,7 +234,7 @@ export class AuthController {
       if (!userId) {
         res.status(HTTP_STATUS.UNAUTHORIZED).json({
           success: false,
-          message: 'Yetkilendirme gerekli',
+          message: AUTH_ERROR_MESSAGES.UNAUTHORIZED,
         });
         return;
       }
@@ -240,7 +245,7 @@ export class AuthController {
       if (!validationResult.success) {
         res.status(HTTP_STATUS.BAD_REQUEST).json({
           success: false,
-          message: 'Geçersiz veri formatı',
+          message: VALIDATION_MESSAGES.INVALID_DATA_FORMAT,
           errors: validationResult.error.errors.map(err => ({
             field: err.path.join('.'),
             message: err.message,
