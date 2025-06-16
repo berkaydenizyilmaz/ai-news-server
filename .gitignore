@@ -70,6 +70,6 @@ Thumbs.db
 supabase/
 
 # API DOCS
-API_DOCUMENTATION.md
+api-docs/
 
 prettier.config.js
