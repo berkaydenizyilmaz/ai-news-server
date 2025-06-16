@@ -20,7 +20,8 @@ import {
 } from './rss.types';
 import { 
   RSS_ERROR_MESSAGES,
-  RSS_SUCCESS_MESSAGES 
+  RSS_SUCCESS_MESSAGES,
+  RSS_QUERY_CONSTRAINTS 
 } from './rss.constants';
 import { RssSource } from '@/core/types/database.types';
 import { RssParserUtil } from '@/core/utils/rss-parser.util';
@@ -400,7 +401,7 @@ export class RssService {
    */
   private static async fetchSingleRssSource(
     source: RssSource,
-    maxItems: number = 10
+    maxItems: number = RSS_QUERY_CONSTRAINTS.LIMIT_DEFAULT
   ): Promise<RssFetchResult> {
     const startTime = Date.now();
     

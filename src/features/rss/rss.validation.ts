@@ -16,15 +16,6 @@ import {
   RSS_VALIDATION_MESSAGES
 } from './rss.constants';
 
-// ==================== VALIDATION CONSTANTS ====================
-
-// RSS kaynak adı için minimum/maksimum değerler
-const RSS_NAME_MIN_LENGTH = 3;
-const RSS_NAME_MAX_LENGTH = 255;
-
-// URL validasyonu için regex pattern
-const URL_REGEX = /^https?:\/\/.+/;
-
 // ==================== VALIDATION SCHEMAS ====================
 
 /**

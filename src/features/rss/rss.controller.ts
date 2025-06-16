@@ -21,7 +21,6 @@ import {
 } from './rss.validation';
 import { 
   RSS_ERROR_MESSAGES,
-  RSS_VALIDATION_MESSAGES 
 } from './rss.constants';
 import { HTTP_STATUS } from '@/core/constants';
 

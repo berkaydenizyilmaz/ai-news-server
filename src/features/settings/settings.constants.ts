@@ -1,12 +1,20 @@
 /**
  * Settings Feature Constants
  * 
- * Settings modülü için tüm sabit değerleri içerir.
- * Validation, business logic ve message sabitleri.
+ * Settings modülü için özel sabit değerleri içerir.
+ * Genel sabitler core constants'tan import edilir.
  * 
  */
 
-// ==================== VALIDATION CONSTANTS ====================
+import { SETTING_CATEGORIES } from '@/core/constants';
+
+// ==================== IMPORTED CONSTANTS ====================
+
+// Setting categories - core constants'tan import edildi (Zod enum için array formatına dönüştürülür)
+export const SETTING_CATEGORIES_ARRAY = Object.values(SETTING_CATEGORIES) as [string, ...string[]];
+
+
+// ==================== MODULE SPECIFIC CONSTANTS ====================
 
 /**
  * Setting Key Constraints
@@ -42,13 +50,7 @@ export const BULK_UPDATE_CONSTRAINTS = {
  */
 export const SETTING_TYPES = ['string', 'number', 'boolean', 'json'] as const;
 
-// ==================== SETTING CATEGORIES ====================
 
-/**
- * Valid Setting Categories
- * Desteklenen ayar kategorileri
- */
-export const SETTING_CATEGORIES = ['rss', 'ai', 'general', 'auth', 'news', 'forum'] as const;
 
 // ==================== ERROR MESSAGES ====================
 

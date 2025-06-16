@@ -11,7 +11,7 @@ import {
   SETTING_DESCRIPTION_CONSTRAINTS,
   BULK_UPDATE_CONSTRAINTS,
   SETTING_TYPES,
-  SETTING_CATEGORIES,
+  SETTING_CATEGORIES_ARRAY,
   SETTINGS_VALIDATION_MESSAGES 
 } from './settings.constants';
 
@@ -50,7 +50,7 @@ export const createSettingSchema = z.object({
     .optional(),
   
   category: z
-    .enum(SETTING_CATEGORIES, {
+    .enum(SETTING_CATEGORIES_ARRAY, {
       errorMap: () => ({ message: SETTINGS_VALIDATION_MESSAGES.INVALID_CATEGORY })
     })
     .optional(),
@@ -105,7 +105,7 @@ export const bulkUpdateSettingsSchema = z.object({
  */
 export const settingsFilterSchema = z.object({
   category: z
-    .enum(SETTING_CATEGORIES)
+    .enum(SETTING_CATEGORIES_ARRAY)
     .optional(),
   
   search: z
