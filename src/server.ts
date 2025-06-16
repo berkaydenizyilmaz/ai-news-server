@@ -7,7 +7,7 @@
 
 import http from 'http';
 import app from './app';
-import config from '@/config';
+import config from '@/core/config';
 
 const server = http.createServer(app);
 

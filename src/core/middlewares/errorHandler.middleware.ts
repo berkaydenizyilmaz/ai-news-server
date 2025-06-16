@@ -7,7 +7,7 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
-import config from '@/config';
+import config from '@/core/config';
 import { 
   HTTP_STATUS, 
   ENVIRONMENT_TYPES, 

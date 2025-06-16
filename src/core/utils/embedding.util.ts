@@ -6,7 +6,7 @@
  * 
  */
 
-import config from '@/config';
+import config from '@/core/config';
 import { AI_EMBEDDING_CONFIG } from '@/core/constants';
 
 /**
