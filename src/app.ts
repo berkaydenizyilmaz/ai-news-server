@@ -16,6 +16,7 @@ import { authRoutes } from '@/features/auth';
 import { settingsRoutes } from '@/features/settings';
 import { rssRoutes } from '@/features/rss';
 import { logRoutes } from '@/features/logs';
+import { usersRoutes } from '@/features/users';
 
 const app = express();
 
@@ -70,6 +71,9 @@ app.get('/api', (req, res) => {
 
 // Authentication routes
 app.use('/api/auth', authRoutes);
+
+// Users routes
+app.use('/api/users', usersRoutes);
 
 // Settings routes
 app.use('/api/settings', settingsRoutes);
