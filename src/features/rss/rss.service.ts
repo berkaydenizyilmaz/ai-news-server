@@ -388,7 +388,6 @@ export class RssService {
   // ==================== PRIVATE HELPER METHODS ====================
 
 
-
   /**
    * Fetch Single RSS Source
    * 
@@ -473,7 +472,7 @@ export class RssService {
               published_date: scrapingResult.content.published_date || item.pubDate,
               rss_source_id: source.id,
               content_embedding: embeddingResult.embedding,
-              processed_time: scrapingResult.content.scrape_time + (embeddingResult.processing_time || 0),
+              processed_time: Math.round((scrapingResult.content.scrape_time + (embeddingResult.processing_time || 0)) / 1000), // Convert to seconds
             };
 
             const savedNews = await RssModel.createOriginalNews(newsData);

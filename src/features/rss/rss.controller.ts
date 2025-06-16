@@ -367,4 +367,117 @@ export class RssController {
       next(error); // Global error handler'a ilet
     }
   }
+
+  /**
+   * Test RSS Feed Parsing
+   * 
+   * RSS feed parsing'i test etmek için debug endpoint.
+   * 
+   * @param req - Express request
+   * @param res - Express response
+   */
+  static async testRssParsing(req: Request, res: Response): Promise<void> {
+    try {
+      const { url } = req.body;
+      
+      if (!url) {
+        res.status(400).json({
+          success: false,
+          error: 'URL gerekli',
+        });
+        return;
+      }
+
+      console.log(`Testing RSS parsing for: ${url}`);
+      
+      // RSS parsing test
+      const { RssParserUtil } = await import('@/core/utils/rss-parser.util');
+      const feedData = await RssParserUtil.parseFeed(url);
+      
+      res.json({
+        success: true,
+        data: {
+          feed_title: feedData.title,
+          feed_description: feedData.description,
+          feed_link: feedData.link,
+          items_count: feedData.items.length,
+          sample_items: feedData.items.slice(0, 3).map(item => ({
+            title: item.title,
+            link: item.link,
+            pubDate: item.pubDate,
+            description: item.description?.substring(0, 200) + '...',
+          })),
+        },
+        message: 'RSS parsing test başarılı',
+      });
+    } catch (error) {
+      console.error('RSS parsing test error:', error);
+      
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'RSS parsing test hatası',
+      });
+    }
+  }
+
+  /**
+   * Test Web Scraping
+   * 
+   * Web scraping'i test etmek için debug endpoint.
+   * 
+   * @param req - Express request
+   * @param res - Express response
+   */
+  static async testWebScraping(req: Request, res: Response): Promise<void> {
+    try {
+      const { url } = req.body;
+      
+      if (!url) {
+        res.status(400).json({
+          success: false,
+          error: 'URL gerekli',
+        });
+        return;
+      }
+
+      console.log(`Testing web scraping for: ${url}`);
+      
+      // Web scraping test
+      const { WebScraperUtil } = await import('@/core/utils/web-scraper.util');
+      const scrapingResult = await WebScraperUtil.scrapeNewsContent(url);
+      
+      if (!scrapingResult.success) {
+        res.status(400).json({
+          success: false,
+          error: scrapingResult.error,
+        });
+        return;
+      }
+
+      res.json({
+        success: true,
+        data: {
+          url: scrapingResult.url,
+          status_code: scrapingResult.status_code,
+          scrape_time: scrapingResult.scrape_time,
+          content: {
+            title: scrapingResult.content?.title,
+            author: scrapingResult.content?.author,
+            published_date: scrapingResult.content?.published_date,
+            image_url: scrapingResult.content?.image_url,
+            content_preview: scrapingResult.content?.content?.substring(0, 500) + '...',
+            summary: scrapingResult.content?.summary,
+          },
+        },
+        message: 'Web scraping test başarılı',
+      });
+    } catch (error) {
+      console.error('Web scraping test error:', error);
+      
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Web scraping test hatası',
+      });
+    }
+  }
 } 

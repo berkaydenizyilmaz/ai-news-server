@@ -1,8 +1,8 @@
 /**
  * Web Scraper Utility
  * 
- * Web sayfalarından haber içeriği çekmek için yardımcı fonksiyonlar.
- * Cheerio kullanarak hafif scraping, gerekirse Puppeteer ile dinamik içerik.
+ * Türk haber sitelerinden dinamik content extraction.
+ * Akıllı algoritma ile farklı site yapılarını otomatik tespit eder.
  * 
  */
 
@@ -13,7 +13,7 @@ import { WEB_SCRAPING_CONFIG } from '@/core/constants';
 /**
  * Web Scraper Class
  * 
- * Static metodlarla web scraping işlemlerini yönetir.
+ * Türk haber siteleri için optimize edilmiş dinamik scraping.
  */
 export class WebScraperUtil {
   
@@ -30,17 +30,21 @@ export class WebScraperUtil {
     const startTime = Date.now();
     
     try {
+      console.log(`🔍 Scraping başlatılıyor: ${url}`);
+      
       // HTTP isteği gönder
       const response = await fetch(url, {
         method: 'GET',
         headers: {
-          'User-Agent': WEB_SCRAPING_CONFIG.USER_AGENT,
-          'Accept': WEB_SCRAPING_CONFIG.ACCEPT_HEADER,
-          'Accept-Language': WEB_SCRAPING_CONFIG.ACCEPT_LANGUAGE,
-          'Accept-Encoding': WEB_SCRAPING_CONFIG.ACCEPT_ENCODING,
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+          'Accept-Language': 'tr-TR,tr;q=0.9,en;q=0.8',
+          'Accept-Encoding': 'gzip, deflate, br',
           'DNT': '1',
           'Connection': 'keep-alive',
           'Upgrade-Insecure-Requests': '1',
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache',
         },
         signal: AbortSignal.timeout(timeout),
       });
@@ -56,7 +60,11 @@ export class WebScraperUtil {
       }
 
       const html = await response.text();
+      console.log(`📄 HTML alındı: ${Math.round(html.length / 1024)}KB`);
+      
       const content = this.parseHtmlContent(html, url);
+
+      console.log(`✅ Content extraction tamamlandı: "${content.title?.substring(0, 50)}..."`);
 
       return {
         url,
@@ -66,7 +74,7 @@ export class WebScraperUtil {
         scrape_time: Date.now() - startTime,
       };
     } catch (error) {
-      console.error(`Scraping error for ${url}:`, error);
+      console.error(`❌ Scraping error for ${url}:`, error);
       
       return {
         url,
@@ -80,7 +88,7 @@ export class WebScraperUtil {
   /**
    * Parse HTML Content
    * 
-   * HTML içeriğini parse ederek haber verilerini çıkarır.
+   * HTML içeriğini akıllı algoritma ile parse eder.
    * 
    * @param html - HTML içeriği
    * @param url - Kaynak URL
@@ -88,216 +96,257 @@ export class WebScraperUtil {
    * @private
    */
   private static parseHtmlContent(html: string, url: string): ScrapedNewsContent {
-    const $ = cheerio.load(html) as cheerio.CheerioAPI;
-    const scrapeTime = Date.now();
-
-    // Başlık çıkarma stratejileri
-    const title = this.extractTitle($);
-    
-    // İçerik çıkarma stratejileri
-    const content = this.extractContent($);
-    
-    // Özet çıkarma
-    const summary = this.extractSummary($);
-    
-    // Yazar çıkarma
-    const author = this.extractAuthor($);
-    
-    // Yayın tarihi çıkarma
-    const publishedDate = this.extractPublishedDate($);
-    
-    // Ana resim çıkarma
-    const imageUrl = this.extractImageUrl($, url);
+    const $ = cheerio.load(html);
 
     return {
-      title: title || 'Başlık bulunamadı',
-      content: content || 'İçerik çıkarılamadı',
-      summary,
-      author,
-      published_date: publishedDate,
-      image_url: imageUrl,
-      scrape_time: Date.now() - scrapeTime,
+      title: this.extractTitle($) || 'Başlık bulunamadı',
+      content: this.extractContent($) || 'İçerik çıkarılamadı',
+      summary: this.extractSummary($),
+      author: this.extractAuthor($),
+      published_date: this.extractPublishedDate($),
+      image_url: this.extractImageUrl($, url),
+      scrape_time: Date.now(),
     };
   }
 
   /**
-   * Extract Title
-   * 
-   * Sayfadan başlığı çıkarır.
+   * Extract Title - Akıllı Başlık Çıkarma
    * 
    * @param $ - Cheerio instance
    * @returns {string} Başlık
    * @private
    */
-  private static extractTitle($: cheerio.CheerioAPI): string {
-    const titleSelectors = [
-      'h1.entry-title',
-      'h1.post-title',
-      'h1.article-title',
-      'h1[class*="title"]',
-      '.entry-header h1',
-      '.post-header h1',
-      '.article-header h1',
-      'h1',
-      'title',
-    ];
+  private static extractTitle($: any): string {
+    // Önce meta tag'leri kontrol et
+    let title = $('meta[property="og:title"]').attr('content') ||
+                $('meta[name="twitter:title"]').attr('content') ||
+                $('meta[name="title"]').attr('content');
+    
+    if (title && title.trim().length > 10) {
+      return this.cleanText(title.trim());
+    }
 
-    for (const selector of titleSelectors) {
-      const title = $(selector).first().text().trim();
-      if (title && title.length > WEB_SCRAPING_CONFIG.MIN_TITLE_LENGTH) {
-        return this.cleanText(title);
+    // H1 tag'lerini akıllıca bul
+    const h1Elements = $('h1');
+    let bestTitle = '';
+    let bestScore = 0;
+
+    h1Elements.each((i: number, element: any) => {
+      const text = $(element).text().trim();
+      if (!text || text.length < 10) return;
+
+      let score = 0;
+      
+      // Uzunluk skoru (çok kısa veya çok uzun başlıkları cezalandır)
+      if (text.length >= 20 && text.length <= 150) score += 10;
+      else if (text.length >= 10 && text.length <= 200) score += 5;
+      
+      // Konum skoru (sayfanın üst kısmındaki başlıklar daha değerli)
+      const position = $(element).offset()?.top || 0;
+      if (position < 1000) score += 5;
+      
+      // Class/ID skoru (haber başlığı olabilecek class'lar)
+      const className = $(element).attr('class') || '';
+      const id = $(element).attr('id') || '';
+      const combined = (className + ' ' + id).toLowerCase();
+      
+      if (combined.includes('title') || combined.includes('baslik') || 
+          combined.includes('headline') || combined.includes('haber')) {
+        score += 15;
       }
+      
+      // Parent element skoru
+      const parent = $(element).parent();
+      const parentClass = parent.attr('class') || '';
+      if (parentClass.toLowerCase().includes('header') || 
+          parentClass.toLowerCase().includes('title') ||
+          parentClass.toLowerCase().includes('content')) {
+        score += 5;
+      }
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestTitle = text;
+      }
+    });
+
+    if (bestTitle) {
+      return this.cleanText(bestTitle);
+    }
+
+    // Fallback: title tag'ından al ve temizle
+    const pageTitle = $('title').text();
+    if (pageTitle) {
+      return this.cleanText(pageTitle.split(' - ')[0].split(' | ')[0]);
     }
 
     return '';
   }
 
   /**
-   * Extract Content
-   * 
-   * Sayfadan ana içeriği çıkarır.
+   * Extract Content - Akıllı İçerik Çıkarma
    * 
    * @param $ - Cheerio instance
    * @returns {string} İçerik
    * @private
    */
-  private static extractContent($: cheerio.CheerioAPI): string {
-    const contentSelectors = [
-      '.entry-content',
-      '.post-content',
-      '.article-content',
-      '.content',
-      '[class*="content"]',
-      '.post-body',
-      '.article-body',
-      '.entry-body',
-      'main article',
-      'article',
-    ];
+  private static extractContent($: any): string {
+    // Gereksiz elementleri kaldır
+    $('script, style, nav, aside, footer, header, .advertisement, .ads, .ad, .social-share, .share, .related, .comments, .comment, .sidebar, .navigation, .breadcrumb, .tags, .categories, .author-box, .bio, .newsletter, .subscription, [class*="ad"], [id*="ad"], [class*="banner"], .widget, .popup, .modal, .overlay').remove();
 
-    for (const selector of contentSelectors) {
-      const element = $(selector).first();
-      if (element.length > 0) {
-        // Gereksiz elementleri kaldır
-        element.find('script, style, nav, aside, footer, .advertisement, .ads, .social-share').remove();
-        
-        const content = element.text().trim();
-        if (content && content.length > WEB_SCRAPING_CONFIG.MIN_CONTENT_LENGTH) {
-          return this.cleanText(content);
-        }
+    // Potansiyel content container'ları bul
+    const contentCandidates: Array<{element: any, score: number, text: string}> = [];
+
+    $('div, article, section, main').each((i: number, element: any) => {
+      const $element = $(element);
+      const text = $element.text().trim();
+      
+      // Çok kısa içerikleri atla
+      if (text.length < 200) return;
+      
+      let score = 0;
+      
+      // Uzunluk skoru
+      if (text.length > 500) score += 10;
+      if (text.length > 1000) score += 10;
+      if (text.length > 2000) score += 5;
+      
+      // Class/ID skoru
+      const className = $element.attr('class') || '';
+      const id = $element.attr('id') || '';
+      const combined = (className + ' ' + id).toLowerCase();
+      
+      if (combined.includes('content') || combined.includes('article') || 
+          combined.includes('post') || combined.includes('entry') ||
+          combined.includes('text') || combined.includes('body') ||
+          combined.includes('haber') || combined.includes('detay')) {
+        score += 20;
       }
+      
+      // Paragraf yoğunluğu skoru
+      const paragraphs = $element.find('p');
+      if (paragraphs.length > 3) score += 10;
+      if (paragraphs.length > 5) score += 5;
+      
+      // Alt element kontrolü (çok fazla alt div varsa reklam olabilir)
+      const childDivs = $element.find('div').length;
+      const textLength = text.length;
+      if (childDivs > 0 && (childDivs / textLength * 1000) > 5) {
+        score -= 10; // Çok fazla div var, muhtemelen reklam
+      }
+      
+      // Link yoğunluğu kontrolü
+      const links = $element.find('a').length;
+      if (links > 0 && (links / textLength * 1000) > 3) {
+        score -= 5; // Çok fazla link var
+      }
+
+      contentCandidates.push({
+        element: $element,
+        score: score,
+        text: text
+      });
+    });
+
+    // En yüksek skorlu content'i seç
+    contentCandidates.sort((a, b) => b.score - a.score);
+    
+    if (contentCandidates.length > 0) {
+      const bestCandidate = contentCandidates[0];
+      console.log(`📝 En iyi content bulundu: ${bestCandidate.score} puan, ${bestCandidate.text.length} karakter`);
+      
+      return this.extractTextFromElement(bestCandidate.element, $);
     }
 
     return '';
+  }
+
+  /**
+   * Extract Text From Element
+   * 
+   * Element'ten temiz metin çıkarır.
+   * 
+   * @param element - İçerik elementi
+   * @param $ - Cheerio instance
+   * @returns {string} Temizlenmiş metin
+   * @private
+   */
+  private static extractTextFromElement(element: any, $: any): string {
+    const paragraphs: string[] = [];
+    
+    // Önce paragrafları al
+    element.find('p').each((i: number, p: any) => {
+      const text = $(p).text().trim();
+      if (text && text.length > 20) {
+        paragraphs.push(text);
+      }
+    });
+
+    // Paragraf yoksa div'leri dene
+    if (paragraphs.length === 0) {
+      element.find('div').each((i: number, div: any) => {
+        const text = $(div).text().trim();
+        // Alt div'i olmayan ve yeterince uzun olan div'leri al
+        if (text && text.length > 50 && $(div).find('div').length === 0) {
+          paragraphs.push(text);
+        }
+      });
+    }
+
+    // Hala içerik yoksa tüm metni al
+    if (paragraphs.length === 0) {
+      const allText = element.text().trim();
+      return this.cleanText(allText);
+    }
+
+    return paragraphs.map(p => this.cleanText(p)).join('\n\n');
   }
 
   /**
    * Extract Summary
    * 
-   * Sayfadan özet çıkarır.
-   * 
    * @param $ - Cheerio instance
    * @returns {string} Özet
    * @private
    */
-  private static extractSummary($: cheerio.CheerioAPI): string {
-    const summarySelectors = [
-      'meta[name="description"]',
-      'meta[property="og:description"]',
-      'meta[name="twitter:description"]',
-      '.excerpt',
-      '.summary',
-      '.lead',
-    ];
-
-    for (const selector of summarySelectors) {
-      let summary = '';
-      
-      if (selector.startsWith('meta')) {
-        summary = $(selector).attr('content') || '';
-      } else {
-        summary = $(selector).first().text().trim();
-      }
-      
-      if (summary && summary.length > 20) {
-        return this.cleanText(summary);
-      }
-    }
-
-    return '';
+  private static extractSummary($: any): string {
+    return $('meta[name="description"]').attr('content') ||
+           $('meta[property="og:description"]').attr('content') ||
+           $('meta[name="twitter:description"]').attr('content') ||
+           '';
   }
 
   /**
    * Extract Author
    * 
-   * Sayfadan yazar bilgisini çıkarır.
-   * 
    * @param $ - Cheerio instance
    * @returns {string} Yazar
    * @private
    */
-  private static extractAuthor($: cheerio.CheerioAPI): string {
-    const authorSelectors = [
-      'meta[name="author"]',
-      'meta[property="article:author"]',
-      '.author',
-      '.byline',
-      '.post-author',
-      '.article-author',
-      '[class*="author"]',
-    ];
-
-    for (const selector of authorSelectors) {
-      let author = '';
-      
-      if (selector.startsWith('meta')) {
-        author = $(selector).attr('content') || '';
-      } else {
-        author = $(selector).first().text().trim();
-      }
-      
-      if (author && author.length > 2) {
-        return this.cleanText(author);
-      }
-    }
-
-    return '';
+  private static extractAuthor($: any): string {
+    return $('meta[name="author"]').attr('content') ||
+           $('meta[property="article:author"]').attr('content') ||
+           $('.author, .byline, .post-author, .article-author, .writer').first().text().trim() ||
+           '';
   }
 
   /**
    * Extract Published Date
    * 
-   * Sayfadan yayın tarihini çıkarır.
-   * 
    * @param $ - Cheerio instance
    * @returns {string} Yayın tarihi
    * @private
    */
-  private static extractPublishedDate($: cheerio.CheerioAPI): string {
-    const dateSelectors = [
-      'meta[property="article:published_time"]',
-      'meta[name="publish_date"]',
-      'time[datetime]',
-      '.publish-date',
-      '.post-date',
-      '.article-date',
-      '[class*="date"]',
-    ];
+  private static extractPublishedDate($: any): string {
+    let date = $('meta[property="article:published_time"]').attr('content') ||
+               $('meta[name="publish_date"]').attr('content') ||
+               $('time[datetime]').attr('datetime') ||
+               $('time').first().text().trim() ||
+               $('.publish-date, .post-date, .article-date').first().text().trim();
 
-    for (const selector of dateSelectors) {
-      let date = '';
-      
-      if (selector.startsWith('meta')) {
-        date = $(selector).attr('content') || '';
-      } else if (selector === 'time[datetime]') {
-        date = $(selector).attr('datetime') || $(selector).text().trim();
-      } else {
-        date = $(selector).first().text().trim();
-      }
-      
-      if (date) {
-        return date;
-      }
+    if (date) {
+      const parsedDate = this.parseTurkishDate(date);
+      return parsedDate || date;
     }
 
     return '';
@@ -306,53 +355,115 @@ export class WebScraperUtil {
   /**
    * Extract Image URL
    * 
-   * Sayfadan ana resim URL'ini çıkarır.
-   * 
    * @param $ - Cheerio instance
    * @param baseUrl - Base URL
    * @returns {string} Resim URL'i
    * @private
    */
-  private static extractImageUrl($: cheerio.CheerioAPI, baseUrl: string): string {
-    const imageSelectors = [
-      'meta[property="og:image"]',
-      'meta[name="twitter:image"]',
-      '.featured-image img',
-      '.post-thumbnail img',
-      '.article-image img',
-      'article img',
-      '.content img',
-    ];
+  private static extractImageUrl($: any, baseUrl: string): string {
+    let imageUrl = $('meta[property="og:image"]').attr('content') ||
+                   $('meta[name="twitter:image"]').attr('content') ||
+                   $('.featured-image img, .post-thumbnail img, .article-image img, .hero-image img, .main-image img').first().attr('src') ||
+                   $('article img, .content img').first().attr('src');
 
-    for (const selector of imageSelectors) {
-      let imageUrl = '';
-      
-      if (selector.startsWith('meta')) {
-        imageUrl = $(selector).attr('content') || '';
-      } else {
-        imageUrl = $(selector).first().attr('src') || '';
-      }
-      
-      if (imageUrl) {
-        // Relative URL'leri absolute'a çevir
-        if (imageUrl.startsWith('/')) {
-          const urlObj = new URL(baseUrl);
-          imageUrl = `${urlObj.protocol}//${urlObj.host}${imageUrl}`;
-        } else if (!imageUrl.startsWith('http')) {
-          imageUrl = new URL(imageUrl, baseUrl).href;
-        }
-        
-        return imageUrl;
-      }
+    if (imageUrl) {
+      return this.normalizeImageUrl(imageUrl, baseUrl);
     }
 
     return '';
   }
 
   /**
-   * Clean Text
+   * Normalize Image URL
    * 
-   * Metni temizler ve düzenler.
+   * @param imageUrl - Resim URL'i
+   * @param baseUrl - Base URL
+   * @returns {string} Normalize edilmiş URL
+   * @private
+   */
+  private static normalizeImageUrl(imageUrl: string, baseUrl: string): string {
+    if (!imageUrl) return '';
+    
+    try {
+      if (imageUrl.startsWith('/')) {
+        const urlObj = new URL(baseUrl);
+        return `${urlObj.protocol}//${urlObj.host}${imageUrl}`;
+      } else if (!imageUrl.startsWith('http')) {
+        return new URL(imageUrl, baseUrl).href;
+      }
+      return imageUrl;
+    } catch (error) {
+      return imageUrl;
+    }
+  }
+
+  /**
+   * Parse Turkish Date
+   * 
+   * Türkçe tarih formatlarını ISO formatına çevirir.
+   * 
+   * @param dateString - Tarih string'i
+   * @returns {string|null} ISO format tarih veya null
+   * @private
+   */
+  private static parseTurkishDate(dateString: string): string | null {
+    if (!dateString) return null;
+
+    try {
+      // Önce standart Date parse'ı dene
+      const standardDate = new Date(dateString);
+      if (!isNaN(standardDate.getTime())) {
+        return standardDate.toISOString();
+      }
+
+      // Türkçe formatları
+      const patterns = [
+        /(\d{1,2})\.(\d{1,2})\.(\d{4})\s*-?\s*(\d{1,2}):(\d{2})/,
+        /(\d{1,2})\.(\d{1,2})\.(\d{4})/,
+        /(\d{1,2})\s+(Ocak|Şubat|Mart|Nisan|Mayıs|Haziran|Temmuz|Ağustos|Eylül|Ekim|Kasım|Aralık)\s+(\d{4})/i,
+      ];
+
+      const months: {[key: string]: number} = {
+        'ocak': 0, 'şubat': 1, 'mart': 2, 'nisan': 3, 'mayıs': 4, 'haziran': 5,
+        'temmuz': 6, 'ağustos': 7, 'eylül': 8, 'ekim': 9, 'kasım': 10, 'aralık': 11
+      };
+
+      for (const pattern of patterns) {
+        const match = dateString.match(pattern);
+        if (match) {
+          if (pattern.source.includes('Ocak')) {
+            // Türkçe ay isimleri
+            const day = parseInt(match[1], 10);
+            const monthName = match[2].toLowerCase();
+            const year = parseInt(match[3], 10);
+            const month = months[monthName];
+            
+            if (month !== undefined) {
+              return new Date(year, month, day).toISOString();
+            }
+          } else {
+            // Sayısal formatlar
+            const day = parseInt(match[1], 10);
+            const month = parseInt(match[2], 10);
+            const year = parseInt(match[3], 10);
+            const hour = match[4] ? parseInt(match[4], 10) : 0;
+            const minute = match[5] ? parseInt(match[5], 10) : 0;
+
+            if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+              return new Date(year, month - 1, day, hour, minute).toISOString();
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.warn('Date parsing error:', error);
+    }
+
+    return null;
+  }
+
+  /**
+   * Clean Text
    * 
    * @param text - Temizlenecek metin
    * @returns {string} Temizlenmiş metin
@@ -362,8 +473,9 @@ export class WebScraperUtil {
     if (!text) return '';
     
     return text
-      .replace(/\s+/g, ' ')     // Çoklu boşlukları tek boşluğa çevir
-      .replace(/\n+/g, '\n')    // Çoklu satır sonlarını tek satır sonuna çevir
-      .trim();                  // Başındaki ve sonundaki boşlukları kaldır
+      .replace(/\s+/g, ' ')
+      .replace(/\n+/g, '\n')
+      .replace(/\t+/g, ' ')
+      .trim();
   }
 } 

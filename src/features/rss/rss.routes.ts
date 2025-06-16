@@ -34,6 +34,12 @@ router.delete('/sources/:id', authMiddleware, requireAdmin, RssController.delete
 // RSS kaynaklarından haber çek - admin yetkisi gerektirir
 router.post('/fetch', authMiddleware, requireAdmin, RssController.fetchRssFeeds);
 
+// Test endpoints (development only)
+if (process.env.NODE_ENV === 'development') {
+  router.post('/test/parse', RssController.testRssParsing);
+  router.post('/test/scrape', RssController.testWebScraping);
+}
+
 // ==================== EXPORT ====================
 
 export const rssRoutes = router; 

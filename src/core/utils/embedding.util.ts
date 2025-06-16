@@ -38,7 +38,7 @@ interface SimilarityResult {
  * Static metodlarla embedding işlemlerini yönetir.
  */
 export class EmbeddingUtil {
-  private static readonly HUGGING_FACE_API_URL = `${config.huggingFace.baseUrl}/models/${config.huggingFace.model}`;
+  private static readonly HUGGING_FACE_API_URL = `https://router.huggingface.co/hf-inference/models/${config.huggingFace.model}/pipeline/feature-extraction`;
 
   /**
    * Generate Text Embedding
@@ -71,9 +71,10 @@ export class EmbeddingUtil {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          inputs: cleanedText,
+          inputs: [cleanedText],
           options: {
             wait_for_model: true,
+            use_cache: false,
           },
         }),
         signal: AbortSignal.timeout(AI_EMBEDDING_CONFIG.REQUEST_TIMEOUT),
@@ -88,13 +89,28 @@ export class EmbeddingUtil {
         };
       }
 
-      const embedding = await response.json();
+      const apiResponse = await response.json();
 
-      // API yanıtını kontrol et
-      if (!Array.isArray(embedding) || embedding.length !== AI_EMBEDDING_CONFIG.VECTOR_DIMENSIONS) {
+      // Feature extraction API yanıtı: [[embedding_vector]] formatında gelir
+      let embedding: number[];
+      if (Array.isArray(apiResponse) && apiResponse.length > 0 && Array.isArray(apiResponse[0])) {
+        embedding = apiResponse[0]; // İlk (ve tek) embedding'i al
+      } else if (Array.isArray(apiResponse) && apiResponse.length === AI_EMBEDDING_CONFIG.VECTOR_DIMENSIONS) {
+        // Direkt embedding array gelirse
+        embedding = apiResponse;
+      } else {
         return {
           success: false,
-          error: 'Geçersiz embedding formatı',
+          error: 'Beklenmeyen API yanıt formatı',
+          processing_time: Date.now() - startTime,
+        };
+      }
+
+      // Embedding boyutunu kontrol et
+      if (embedding.length !== AI_EMBEDDING_CONFIG.VECTOR_DIMENSIONS) {
+        return {
+          success: false,
+          error: `Geçersiz embedding boyutu: ${embedding.length}`,
           processing_time: Date.now() - startTime,
         };
       }
@@ -105,8 +121,6 @@ export class EmbeddingUtil {
         processing_time: Date.now() - startTime,
       };
     } catch (error) {
-      console.error('Embedding generation error:', error);
-      
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Bilinmeyen embedding hatası',
