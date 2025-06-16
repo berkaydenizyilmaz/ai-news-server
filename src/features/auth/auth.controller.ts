@@ -12,9 +12,11 @@ import {
   registerSchema, 
   loginSchema, 
   changePasswordSchema,
+  updateProfileSchema,
   RegisterInput,
   LoginInput,
-  ChangePasswordInput
+  ChangePasswordInput,
+  UpdateProfileInput
 } from './auth.validation';
 import { 
   AUTH_SUCCESS_MESSAGES,
@@ -208,6 +210,69 @@ export class AuthController {
       }
     } catch (error) {
       console.error('Error in getProfile controller:', error);
+      next(error); // Global error handler'a ilet
+    }
+  }
+
+  /**
+   * Update User Profile Endpoint Handler
+   * 
+   * PUT /api/auth/profile
+   * Kullanıcının profil bilgilerini güncelleme işlemini yönetir.
+   * Auth middleware ile korunmalıdır.
+   * 
+   * @param req - Express Request object (body: UpdateProfileRequest, user: TokenPayload)
+   * @param res - Express Response object
+   * @param next - Express NextFunction for error handling
+   * @returns {Promise<void>} HTTP response
+   */
+  static async updateProfile(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      // Auth middleware'den gelen user bilgisi
+      const userId = (req as any).user?.userId;
+
+      if (!userId) {
+        res.status(HTTP_STATUS.UNAUTHORIZED).json({
+          success: false,
+          message: AUTH_ERROR_MESSAGES.UNAUTHORIZED,
+        });
+        return;
+      }
+
+      // Request body validasyonu
+      const validationResult = updateProfileSchema.safeParse(req.body);
+      
+      if (!validationResult.success) {
+        res.status(HTTP_STATUS.BAD_REQUEST).json({
+          success: false,
+          message: VALIDATION_MESSAGES.INVALID_DATA_FORMAT,
+          errors: validationResult.error.errors.map(err => ({
+            field: err.path.join('.'),
+            message: err.message,
+          })),
+        });
+        return;
+      }
+
+      const profileData: UpdateProfileInput = validationResult.data;
+
+      // Servis katmanını çağır
+      const result = await AuthService.updateProfile(userId, profileData);
+
+      if (result.success) {
+        res.status(HTTP_STATUS.OK).json({
+          success: true,
+          data: result.data,
+          message: result.message,
+        });
+      } else {
+        res.status(HTTP_STATUS.BAD_REQUEST).json({
+          success: false,
+          error: result.error,
+        });
+      }
+    } catch (error) {
+      console.error('Error in updateProfile controller:', error);
       next(error); // Global error handler'a ilet
     }
   }

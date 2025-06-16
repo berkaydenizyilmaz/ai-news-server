@@ -65,6 +65,18 @@ export interface ResetPasswordRequest {
   newPassword: string; // Yeni şifre
 }
 
+/**
+ * Update Profile Request DTO
+ * 
+ * Profil güncelleme işlemi için gerekli veriler.
+ * Tüm alanlar opsiyonel - sadece değiştirilmek istenen alanlar gönderilir.
+ */
+export interface UpdateProfileRequest {
+  email?: string;     // Yeni email adresi (opsiyonel)
+  username?: string;  // Yeni kullanıcı adı (opsiyonel)
+  avatar_url?: string; // Yeni avatar URL'i (opsiyonel, boş string = avatar sil)
+}
+
 // ==================== AUTH RESPONSE DTOs ====================
 
 /**

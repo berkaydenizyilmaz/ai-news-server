@@ -13,7 +13,8 @@ import { AuthModel } from './auth.model';
 import { 
   RegisterInput, 
   LoginInput, 
-  ChangePasswordInput 
+  ChangePasswordInput,
+  UpdateProfileInput
 } from './auth.validation';
 import { 
   AuthResponse, 
@@ -277,6 +278,97 @@ export class AuthService {
       return {
         success: false,
         error: 'Profil bilgileri alınamadı',
+      };
+    }
+  }
+
+  /**
+   * Update User Profile Business Logic
+   * 
+   * Kullanıcı profil güncelleme işlemi için iş mantığını yönetir:
+   * - Kullanıcı varlık kontrolü
+   * - Email/username duplicate kontrolü
+   * - Profil güncelleme
+   * 
+   * @param userId - Profili güncellenecek kullanıcı ID'si
+   * @param profileData - Validasyon geçmiş profil verileri
+   * @returns {Promise<AuthServiceResponse<Omit<User, 'password_hash'>>>} Güncelleme sonucu
+   */
+  static async updateProfile(
+    userId: string, 
+    profileData: UpdateProfileInput
+  ): Promise<AuthServiceResponse<Omit<User, 'password_hash'>>> {
+    try {
+      // Kullanıcının varlığını kontrol et
+      const existingUser = await AuthModel.findById(userId);
+
+      if (!existingUser) {
+        return {
+          success: false,
+          error: AUTH_ERROR_MESSAGES.USER_NOT_FOUND,
+        };
+      }
+
+      // Boş güncelleme kontrolü
+      if (Object.keys(profileData).length === 0) {
+        return {
+          success: false,
+          error: 'Güncellenecek alan belirtilmedi',
+        };
+      }
+
+      // Email/username duplicate kontrolü (sadece değiştirilmek istenen alanlar için)
+      if (profileData.email || profileData.username) {
+        const duplicateCheck = await AuthModel.checkEmailOrUsernameExistsForUpdate(
+          profileData.email,
+          profileData.username,
+          userId
+        );
+
+        if (duplicateCheck.emailExists) {
+          return {
+            success: false,
+            error: AUTH_ERROR_MESSAGES.EMAIL_EXISTS,
+          };
+        }
+
+        if (duplicateCheck.usernameExists) {
+          return {
+            success: false,
+            error: AUTH_ERROR_MESSAGES.USERNAME_EXISTS,
+          };
+        }
+      }
+
+      // Avatar URL boş string ise null'a çevir (avatar silme)
+      const updateData = { ...profileData };
+      if (updateData.avatar_url === '') {
+        updateData.avatar_url = undefined;
+      }
+
+      // Profili güncelle
+      const updatedUser = await AuthModel.updateProfile(userId, updateData);
+
+      if (!updatedUser) {
+        return {
+          success: false,
+          error: 'Profil güncelleme işlemi başarısız oldu',
+        };
+      }
+
+      // Güvenlik: Şifre hash'ini response'dan çıkar
+      const { password_hash: _, ...userWithoutPassword } = updatedUser;
+
+      return {
+        success: true,
+        data: userWithoutPassword,
+        message: 'Profil başarıyla güncellendi',
+      };
+    } catch (error) {
+      console.error('Error in updateProfile service:', error);
+      return {
+        success: false,
+        error: 'Profil güncelleme işlemi sırasında bir hata oluştu',
       };
     }
   }

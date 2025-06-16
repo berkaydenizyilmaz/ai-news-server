@@ -28,6 +28,9 @@ router.post('/logout', AuthController.logout);
 // Kullanıcı profili - kimlik doğrulama gerektirir
 router.get('/profile', authMiddleware, AuthController.getProfile);
 
+// Profil güncelleme - kimlik doğrulama gerektirir
+router.put('/profile', authMiddleware, AuthController.updateProfile);
+
 // Şifre değiştirme - kimlik doğrulama gerektirir
 router.put('/change-password', authMiddleware, AuthController.changePassword);
 

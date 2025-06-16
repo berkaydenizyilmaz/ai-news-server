@@ -67,5 +67,6 @@ export const VALIDATION_MESSAGES = {
   CURRENT_PASSWORD_REQUIRED: 'Mevcut şifre zorunludur',
   NEW_PASSWORD_REQUIRED: 'Yeni şifre zorunludur',
   RESET_TOKEN_REQUIRED: 'Reset token zorunludur',
+  AVATAR_URL_INVALID: 'Geçerli bir URL giriniz',
   INVALID_DATA_FORMAT: 'Geçersiz veri formatı',
-} as const; 
+} as const;

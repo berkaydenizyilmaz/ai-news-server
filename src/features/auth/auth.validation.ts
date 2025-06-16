@@ -112,6 +112,34 @@ export const resetPasswordSchema = z.object({
     .min(1, VALIDATION_MESSAGES.PASSWORD_REQUIRED),
 });
 
+/**
+ * Update Profile Validation Schema
+ * 
+ * Profil güncelleme için validasyon kuralları:
+ * - Email: Geçerli email formatı, opsiyonel
+ * - Username: 3-50 karakter, sadece harf/rakam, opsiyonel
+ * - Avatar URL: Geçerli URL formatı, opsiyonel
+ */
+export const updateProfileSchema = z.object({
+  email: z
+    .string()
+    .email(VALIDATION_MESSAGES.EMAIL_INVALID)
+    .optional(),
+  
+  username: z
+    .string()
+    .min(USERNAME_CONSTRAINTS.MIN_LENGTH, VALIDATION_MESSAGES.USERNAME_MIN_LENGTH)
+    .max(USERNAME_CONSTRAINTS.MAX_LENGTH, VALIDATION_MESSAGES.USERNAME_MAX_LENGTH)
+    .regex(USERNAME_CONSTRAINTS.REGEX, VALIDATION_MESSAGES.USERNAME_INVALID_CHARS)
+    .optional(),
+  
+  avatar_url: z
+    .string()
+    .url(VALIDATION_MESSAGES.AVATAR_URL_INVALID)
+    .optional()
+    .or(z.literal('')), // Boş string kabul et (avatar silme için)
+});
+
 // ==================== TYPE INFERENCE ====================
 
 /**
@@ -124,4 +152,5 @@ export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
-export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>; 
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
+export type UpdateProfileInput = z.infer<typeof updateProfileSchema>; 

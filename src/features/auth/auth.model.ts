@@ -228,4 +228,109 @@ export class AuthModel {
       return false;
     }
   }
+
+  /**
+   * Update User Profile
+   * 
+   * Kullanıcının profil bilgilerini günceller (email, username, avatar).
+   * Sadece gönderilen alanları günceller (partial update).
+   * 
+   * @param userId - Profili güncellenecek kullanıcı ID'si
+   * @param profileData - Güncellenecek profil verileri
+   * @returns {Promise<User | null>} Güncellenen kullanıcı veya null
+   * @throws {Error} Veritabanı hatası durumunda
+   */
+  static async updateProfile(userId: string, profileData: Partial<Pick<User, 'email' | 'username' | 'avatar_url'>>): Promise<User | null> {
+    try {
+      // Boş obje kontrolü
+      if (Object.keys(profileData).length === 0) {
+        return null;
+      }
+
+      const { data, error } = await supabaseAdmin
+        .from('users')
+        .update({
+          ...profileData,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', userId)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error updating profile:', error);
+        return null;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error in updateProfile:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Check Email or Username Exists for Update
+   * 
+   * Profil güncelleme sırasında email ve username'in başka kullanıcılar
+   * tarafından kullanılıp kullanılmadığını kontrol eder.
+   * Kendi bilgilerini güncelleme durumunu hariç tutar.
+   * 
+   * @param email - Kontrol edilecek email adresi
+   * @param username - Kontrol edilecek kullanıcı adı
+   * @param excludeUserId - Kontrolden hariç tutulacak kullanıcı ID'si (kendisi)
+   * @returns {Promise<{emailExists: boolean, usernameExists: boolean}>}
+   * @throws {Error} Veritabanı hatası durumunda
+   */
+  static async checkEmailOrUsernameExistsForUpdate(
+    email?: string, 
+    username?: string, 
+    excludeUserId?: string
+  ): Promise<{ emailExists: boolean; usernameExists: boolean }> {
+    try {
+      const checks = [];
+
+      // Email kontrolü
+      if (email) {
+        const emailQuery = supabaseAdmin
+          .from('users')
+          .select('id')
+          .eq('email', email);
+        
+        if (excludeUserId) {
+          emailQuery.neq('id', excludeUserId);
+        }
+        
+        checks.push(emailQuery.single());
+      } else {
+        checks.push(Promise.resolve({ data: null }));
+      }
+
+      // Username kontrolü
+      if (username) {
+        const usernameQuery = supabaseAdmin
+          .from('users')
+          .select('id')
+          .eq('username', username);
+        
+        if (excludeUserId) {
+          usernameQuery.neq('id', excludeUserId);
+        }
+        
+        checks.push(usernameQuery.single());
+      } else {
+        checks.push(Promise.resolve({ data: null }));
+      }
+
+      const [emailCheck, usernameCheck] = await Promise.all(checks);
+
+      return {
+        emailExists: emailCheck.data !== null,
+        usernameExists: usernameCheck.data !== null,
+      };
+    } catch (error) {
+      console.error('Error in checkEmailOrUsernameExistsForUpdate:', error);
+      return { emailExists: false, usernameExists: false };
+    }
+  }
 } 
