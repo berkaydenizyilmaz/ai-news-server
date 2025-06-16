@@ -18,8 +18,6 @@ export {
   USER_ROLES,
   USER_ROLE_HIERARCHY,
   USER_STATUS,
-  USER_PERMISSIONS,
-  ROLE_PERMISSIONS,
 } from './user.constants';
 
 // ==================== SYSTEM CONSTANTS ====================
