@@ -8,18 +8,33 @@
 import http from 'http';
 import app from './app';
 import config from '@/core/config';
+import { AutomationService } from '@/features/automation';
 
 const server = http.createServer(app);
 
 /**
  * Sunucuyu başlatır ve bağlantı bilgilerini konsola yazdırır.
  */
-const startServer = () => {
-  server.listen(config.port, () => {
+const startServer = async () => {
+  server.listen(config.port, async () => {
     console.log(`🚀 Server şu portta çalışıyor: ${config.port}`);
     console.log(`📍 Ortam: ${config.nodeEnv}`);
     console.log(`🔗 Health check: http://localhost:${config.port}/health`);
     console.log(`🔗 API endpoint: http://localhost:${config.port}/api`);
+    
+    // Automation sistemini başlat
+    try {
+      const automationService = AutomationService.getInstance();
+      const result = await automationService.startAutomation();
+      
+      if (result.success) {
+        console.log('🤖 Automation sistemi başlatıldı');
+      } else {
+        console.warn('⚠️ Automation sistemi başlatılamadı:', result.error);
+      }
+    } catch (error) {
+      console.error('❌ Automation başlatma hatası:', error);
+    }
   });
 };
 

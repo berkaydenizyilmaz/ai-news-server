@@ -552,9 +552,9 @@ export class NewsModel {
   /**
    * Get Pending News for Processing
    * 
-   * AI işleme bekleyen haberleri getirir.
+   * AI işleme için bekleyen haberleri getirir.
    * 
-   * @param limit - Maksimum kayıt sayısı
+   * @param limit - Maksimum haber sayısı
    * @returns {Promise<OriginalNews[]>}
    */
   static async getPendingNewsForProcessing(limit: number = 10): Promise<OriginalNews[]> {

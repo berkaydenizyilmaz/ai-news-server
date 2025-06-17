@@ -24,7 +24,6 @@ import {
 } from './automation.types';
 import { SchedulerService } from './scheduler.service';
 import { JobQueueService } from './job-queue.service';
-import { LogService } from '@/features/logs/log.service';
 
 /**
  * Main Automation Service
@@ -147,12 +146,7 @@ export class AutomationService extends EventEmitter {
       const status = await this.getSchedulerStatus();
 
       // Log kaydı
-      await LogService.createLog({
-        level: 'info',
-        message: AUTOMATION_SUCCESS_MESSAGES.SCHEDULER_STARTED,
-        module: 'automation',
-        action: 'start_automation',
-      });
+      console.log(AUTOMATION_SUCCESS_MESSAGES.SCHEDULER_STARTED);
 
       return {
         success: true,
@@ -163,13 +157,7 @@ export class AutomationService extends EventEmitter {
     } catch (error) {
       console.error('Error starting automation:', error);
       
-      await LogService.createLog({
-        level: 'error',
-        message: AUTOMATION_ERROR_MESSAGES.SCHEDULER_START_FAILED,
-        module: 'automation',
-        action: 'start_automation',
-        metadata: { error: error instanceof Error ? error.message : 'Unknown error' },
-      });
+      console.log(AUTOMATION_ERROR_MESSAGES.SCHEDULER_START_FAILED);
 
       return {
         success: false,
@@ -204,12 +192,7 @@ export class AutomationService extends EventEmitter {
       this.isRunning = false;
       this.startTime = null;
 
-      await LogService.createLog({
-        level: 'info',
-        message: AUTOMATION_SUCCESS_MESSAGES.SCHEDULER_STOPPED,
-        module: 'automation',
-        action: 'stop_automation',
-      });
+      console.log(AUTOMATION_SUCCESS_MESSAGES.SCHEDULER_STOPPED);
 
       return {
         success: true,
@@ -219,13 +202,7 @@ export class AutomationService extends EventEmitter {
     } catch (error) {
       console.error('Error stopping automation:', error);
       
-      await LogService.createLog({
-        level: 'error',
-        message: AUTOMATION_ERROR_MESSAGES.SCHEDULER_STOP_FAILED,
-        module: 'automation',
-        action: 'stop_automation',
-        metadata: { error: error instanceof Error ? error.message : 'Unknown error' },
-      });
+      console.log(AUTOMATION_ERROR_MESSAGES.SCHEDULER_STOP_FAILED);
 
       return {
         success: false,
@@ -336,23 +313,11 @@ export class AutomationService extends EventEmitter {
    * Event Handlers
    */
   private async onJobCompleted(job: any, result: any): Promise<void> {
-    await LogService.createLog({
-      level: 'info',
-      message: `Job completed: ${job.type}`,
-      module: 'automation',
-      action: 'job_completed',
-      metadata: { job_id: job.id, result },
-    });
+    console.log(`Job completed: ${job.type}`);
   }
 
   private async onJobFailed(job: any, error: any): Promise<void> {
-    await LogService.createLog({
-      level: 'error',
-      message: `Job failed: ${job.type}`,
-      module: 'automation',
-      action: 'job_failed',
-      metadata: { job_id: job.id, error: error?.message },
-    });
+    console.error(`Job failed: ${job.type}`);
 
     // Retry logic
     if (this.config.enable_retry_mechanism) {
