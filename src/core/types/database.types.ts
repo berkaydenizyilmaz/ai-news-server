@@ -199,7 +199,7 @@ export interface ProcessedNews {
 
 /**
  * News Source Interface
- * Haber kaynaklarını tanımlar
+ * İşlenmiş haberlerin kaynaklarını tanımlar
  */
 export interface NewsSource {
   id: string;
@@ -213,7 +213,7 @@ export interface NewsSource {
 
 /**
  * News Difference Interface
- * Orijinal ve işlenmiş haber arasındaki farkları tanımlar
+ * Haber kaynaklarındaki farklılıkları tanımlar
  */
 export interface NewsDifference {
   id: string;
@@ -400,14 +400,32 @@ export interface ProcessedNewsWithDetails extends ProcessedNews {
 }
 
 /**
+ * News with Relations Interface
+ * İşlenmiş haberi ilişkili verileriyle birlikte tanımlar
+ */
+export interface NewsWithRelations extends ProcessedNews {
+  category?: NewsCategory;
+  original_news?: OriginalNews;
+  sources?: NewsSource[];
+  differences?: NewsDifference[];
+}
+
+/**
+ * Category with Stats Interface
+ * Kategoriyi istatistikleriyle birlikte tanımlar
+ */
+export interface CategoryWithStats extends NewsCategory {
+  news_count?: number;
+  latest_news_date?: string;
+}
+
+/**
  * Original News with Source Interface
  * Orijinal haberi RSS kaynağıyla birlikte tanımlar
  */
 export interface OriginalNewsWithSource extends OriginalNews {
   rss_source?: RssSource;
 }
-
-
 
 /**
  * Comment with User Interface

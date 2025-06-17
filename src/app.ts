@@ -17,6 +17,7 @@ import { settingsRoutes } from '@/features/settings';
 import { rssRoutes } from '@/features/rss';
 import { logRoutes } from '@/features/logs';
 import { usersRoutes } from '@/features/users';
+import { newsRoutes } from '@/features/news';
 
 const app = express();
 
@@ -80,6 +81,9 @@ app.use('/api/settings', settingsRoutes);
 
 // RSS routes
 app.use('/api/rss', rssRoutes);
+
+// News routes
+app.use('/api/news', newsRoutes);
 
 // Log routes
 app.use('/api/logs', logRoutes);
