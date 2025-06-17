@@ -80,20 +80,23 @@ export class NewsGenerationService {
       };
 
       // 4. LangGraph ile araştırma yap
-      const researchResponse = await LangGraphService.researchNewsTopic(researchRequest);
+      const researchResponse = await LangGraphService.researchNewsTopic(
+        researchRequest,
+        generationInput.available_categories
+      );
       
       if (!researchResponse.success || !researchResponse.answer) {
         return {
           status: 'rejected',
           rejection_reason: researchResponse.error || NEWS_ERROR_MESSAGES.GENERATION_FAILED,
           processing_time: Date.now() - startTime,
-        };
+      };
       }
 
-      // 5. LangGraph response'unu işle
-      const processedContent = await this.parseLangGraphResponse(
+      // 5. LangGraph JSON response'unu parse et
+      const processedContent = await this.parseLangGraphJsonResponse(
         researchResponse, 
-        validation.category_match!
+        generationInput.available_categories
       );
 
       if (!processedContent) {
@@ -104,11 +107,29 @@ export class NewsGenerationService {
         };
       }
 
-      // 6. Veritabanına kaydet
+      // 6. Kategori kontrolü - NONE ise skipped yap
+      if (processedContent.category_slug === 'NONE' || !processedContent.category_match) {
+        return {
+          status: 'rejected',
+          rejection_reason: NEWS_ERROR_MESSAGES.GENERATION_NO_CATEGORY_MATCH,
+          processing_time: Date.now() - startTime,
+        };
+      }
+
+      // 7. Confidence kontrolü
+      if (processedContent.confidence_score < NEWS_VALIDATION_RULES.MIN_CONFIDENCE) {
+        return {
+          status: 'rejected',
+          rejection_reason: `Düşük güven skoru: ${processedContent.confidence_score}`,
+          processing_time: Date.now() - startTime,
+        };
+      }
+
+      // 8. Veritabanına kaydet
       const savedNews = await this.saveGeneratedNews(
         originalNews,
         processedContent,
-        validation.category_match!
+        processedContent.category_match!
       );
 
       if (!savedNews.processed_news) {
@@ -141,49 +162,74 @@ export class NewsGenerationService {
   // ==================== LANGGRAPH RESPONSE PROCESSING ====================
 
   /**
-   * Parse LangGraph Research Response
+   * Parse LangGraph JSON Research Response
    * 
-   * LangGraph'dan gelen response'u parse ederek processed news formatına çevirir.
+   * LangGraph'dan gelen JSON response'u parse ederek processed news formatına çevirir.
    * 
    * @param response - LangGraph research response
-   * @param category - Seçilen kategori
+   * @param availableCategories - Mevcut kategoriler
    * @returns {Promise<any>}
    */
-  static async parseLangGraphResponse(
+  static async parseLangGraphJsonResponse(
     response: any,
-    category: Pick<NewsCategory, 'id' | 'name' | 'slug'>
+    availableCategories: Pick<NewsCategory, 'id' | 'name' | 'slug'>[]
   ): Promise<any> {
     try {
-      const content = response.answer || '';
-      const sources = response.sources || [];
-      const confidence = response.confidence_score || 0.8;
+      const answerText = response.answer || '';
+      
+      // JSON parse et
+      let parsedResponse: any;
+      try {
+        // JSON'u temizle (markdown kod blokları varsa)
+        const cleanJson = answerText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+        parsedResponse = JSON.parse(cleanJson);
+      } catch (parseError) {
+        console.error('Failed to parse LangGraph JSON response:', parseError);
+        return null;
+      }
 
-      // Content'ten başlık ve gövdeyi ayırmaya çalış
-      const lines = content.split('\n').filter((line: string) => line.trim());
-      const title = lines[0]?.replace(/^#+\s*/, '').trim() || 'AI Tarafından Üretilen Başlık';
-      
-      // İlk satırı başlık olarak kabul et, kalanını content olarak al
-      const mainContent = lines.slice(1).join('\n').trim() || content;
-      
-      // Özet oluştur (ilk 2-3 cümle)
-      const sentences = mainContent.split(/[.!?]+/).filter((s: string) => s.trim());
-      const summary = sentences.slice(0, 3).join('. ').trim() + '.';
+      // Gerekli alanları kontrol et
+      if (!parsedResponse.title || !parsedResponse.content) {
+        console.error('Missing required fields in LangGraph response');
+        return null;
+      }
+
+      // Kategori eşleştirme
+      let categoryMatch = null;
+      if (parsedResponse.category_slug && parsedResponse.category_slug !== 'NONE') {
+        categoryMatch = availableCategories.find(cat => cat.slug === parsedResponse.category_slug);
+      }
+
+      // Slug oluştur (title'dan)
+      const slug = parsedResponse.title
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .substring(0, 100);
 
       return {
-        title: title,
-        content: mainContent,
-        summary: summary,
-        category_id: category.id,
-        confidence_score: confidence,
-        sources_used: sources.map((source: any) => ({
+        title: parsedResponse.title,
+        slug: slug,
+        content: parsedResponse.content,
+        summary: parsedResponse.summary || '',
+        category_id: categoryMatch?.id,
+        category_match: categoryMatch,
+        category_slug: parsedResponse.category_slug,
+        confidence_score: parsedResponse.confidence_score || 0.5,
+        sources_used: (parsedResponse.sources || []).map((source: any) => ({
           name: source.title || 'Bilinmeyen Kaynak',
           url: source.url || '#',
+          snippet: source.snippet || '',
+          reliability_score: source.reliability_score || 0.5,
         })),
-        differences_found: [], // LangGraph'dan gelen analiz varsa buraya eklenebilir
+        differences_found: (parsedResponse.differences || []).map((diff: any) => ({
+          title: diff.title || 'Fark',
+          description: diff.description || '',
+        })),
         processing_time: response.processing_time || 0,
       };
     } catch (error) {
-      console.error('Error parsing LangGraph response:', error);
+      console.error('Error parsing LangGraph JSON response:', error);
       return null;
     }
   }
@@ -371,4 +417,4 @@ export class NewsGenerationService {
       return {};
     }
   }
-}
+} 

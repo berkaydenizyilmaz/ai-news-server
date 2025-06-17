@@ -66,9 +66,13 @@ export class LangGraphService {
    * Haber konusu için kapsamlı araştırma yapar.
    * 
    * @param request - Araştırma isteği
+   * @param availableCategories - Mevcut haber kategorileri
    * @returns {Promise<LangGraphResearchResponse>}
    */
-  static async researchNewsTopic(request: LangGraphResearchRequest): Promise<LangGraphResearchResponse> {
+  static async researchNewsTopic(
+    request: LangGraphResearchRequest,
+    availableCategories?: Array<{id: string, name: string, slug: string}>
+  ): Promise<LangGraphResearchResponse> {
     try {
       // Input validation
       const validationResult = langGraphResearchSchema.safeParse(request);
@@ -87,8 +91,8 @@ export class LangGraphService {
         throw new Error('Failed to create LangGraph thread');
       }
 
-      // Research prompt'unu hazırla
-      const researchPrompt = this.buildResearchPrompt(validatedRequest);
+      // Research prompt'unu hazırla (kategorilerle birlikte)
+      const researchPrompt = this.buildResearchPrompt(validatedRequest, availableCategories);
 
       // Thread'e mesaj gönder
       const messageResponse = await this.sendMessage(threadResponse.thread_id, researchPrompt);
@@ -292,11 +296,19 @@ export class LangGraphService {
    * Haber araştırması için optimize edilmiş prompt oluşturur.
    * 
    * @param request - Araştırma isteği
+   * @param availableCategories - Mevcut haber kategorileri
    * @returns {string}
    */
-  private static buildResearchPrompt(request: LangGraphResearchRequest): string {
+  private static buildResearchPrompt(
+    request: LangGraphResearchRequest, 
+    availableCategories?: Array<{id: string, name: string, slug: string}>
+  ): string {
     const language = request.language || 'tr';
     const depth = request.research_depth || 'standard';
+    
+    const categoriesText = availableCategories 
+      ? availableCategories.map(cat => `- ${cat.name} (${cat.slug})`).join('\n')
+      : '';
     
     if (language === 'tr') {
       return `
@@ -305,23 +317,50 @@ Bu Türkçe haber konusu için kapsamlı araştırma yap ve yeni bir haber makal
 ARAŞTIRMA KONUSU:
 ${request.query}
 
+${availableCategories ? `MEVCUT KATEGORİLER:
+${categoriesText}
+
+Haberin hangi kategoriye ait olduğunu belirle. Eğer hiçbir kategoriye uygun değilse "NONE" yaz.` : ''}
+
 GÖREVLER:
 1. Bu konuyla ilgili güncel gelişmeleri araştır
-2. Farklı kaynaklardan güvenilir bilgiler topla
+2. Farklı kaynaklardan güvenilir bilgiler topla (minimum ${request.max_results || 5} kaynak)
 3. Çoklu bakış açılarını değerlendir
 4. Kapsamlı, objektif bir haber makalesi yaz
+5. Orijinal haberle karşılaştırma yap
 
 ARAŞTIRMA DERİNLİĞİ: ${depth}
-MAKSIMUM KAYNAK SAYISI: ${request.max_results || 5}
 
-ÇIKTI GEREKSİNİMLERİ:
-- Yeni, özgün başlık
-- Kapsamlı haber metni
-- Kısa özet (2-3 cümle)
-- Kullanılan kaynaklar listesi
-- Güvenilirlik analizi
+ÇIKTI FORMATI (JSON):
+{
+  "title": "Yeni, özgün başlık (maksimum 150 karakter)",
+  "content": "Kapsamlı haber metni",
+  "summary": "Kısa özet (2-3 cümle, maksimum 200 karakter)",
+  "category_slug": "uygun-kategori-slug veya NONE",
+  "confidence_score": 0.8,
+  "sources": [
+    {
+      "title": "Kaynak başlığı",
+      "url": "https://kaynak-url.com",
+      "snippet": "Kısa alıntı",
+      "reliability_score": 0.9
+    }
+  ],
+  "differences": [
+    {
+      "title": "Ana fark başlığı",
+      "description": "Orijinal haberden farkı açıkla"
+    }
+  ]
+}
 
-ÖNEMLI: Türkçe yanıt ver ve güncel, doğrulanabilir kaynaklara odaklan.
+ÖNEMLI KURALLAR:
+- Sadece JSON formatında yanıt ver, başka metin ekleme
+- Türkçe içerik oluştur
+- Güncel, doğrulanabilir kaynaklara odaklan
+- Orijinal haberden farklı açılar ve detaylar ekle
+- Confidence score 0.0-1.0 arası olmalı
+- Eğer kategori uygun değilse confidence'ı 0.3'ün altında tut
 `;
     } else {
       return `
@@ -330,23 +369,49 @@ Conduct comprehensive research on this news topic and create a detailed news art
 RESEARCH TOPIC:
 ${request.query}
 
+${availableCategories ? `AVAILABLE CATEGORIES:
+${categoriesText}
+
+Determine which category this news belongs to. If it doesn't fit any category, write "NONE".` : ''}
+
 TASKS:
 1. Research current developments on this topic
-2. Gather reliable information from different sources
+2. Gather reliable information from different sources (minimum ${request.max_results || 5} sources)
 3. Evaluate multiple perspectives
 4. Write a comprehensive, objective news article
+5. Compare with original news
 
 RESEARCH DEPTH: ${depth}
-MAX SOURCES: ${request.max_results || 5}
 
-OUTPUT REQUIREMENTS:
-- New, original headline
-- Comprehensive news content (minimum 500 words)
-- Brief summary (2-3 sentences)
-- List of sources used
-- Reliability analysis
+OUTPUT FORMAT (JSON):
+{
+  "title": "New, original headline (max 150 chars)",
+  "content": "Comprehensive news content (minimum 500 words)",
+  "summary": "Brief summary (2-3 sentences, max 200 chars)",
+  "category_slug": "appropriate-category-slug or NONE",
+  "confidence_score": 0.8,
+  "sources": [
+    {
+      "title": "Source title",
+      "url": "https://source-url.com",
+      "snippet": "Brief quote",
+      "reliability_score": 0.9
+    }
+  ],
+  "differences": [
+    {
+      "title": "Main difference title",
+      "description": "Explain difference from original news"
+    }
+  ]
+}
 
-IMPORTANT: Focus on current, verifiable sources.
+IMPORTANT RULES:
+- Respond only in JSON format, no additional text
+- Focus on current, verifiable sources
+- Add different angles and details from original news
+- Confidence score must be between 0.0-1.0
+- If category doesn't fit, keep confidence below 0.3
 `;
     }
   }
