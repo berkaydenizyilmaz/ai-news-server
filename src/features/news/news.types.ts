@@ -94,7 +94,7 @@ export interface NewsGenerationRequest {
   original_news_id: string;          // RSS'den gelen orijinal haber ID'si
   available_categories: Pick<NewsCategory, 'id' | 'name' | 'slug'>[]; // Mevcut kategoriler (sadece gerekli alanlar)
   max_sources?: number;              // Maksimum kaynak sayısı
-  research_depth?: 'basic' | 'deep'; // Araştırma derinliği
+  research_depth?: 'quick' | 'standard' | 'deep'; // Araştırma derinliği (LangGraph uyumlu)
   force_regenerate?: boolean;        // Yeniden üretmeyi zorla
 }
 

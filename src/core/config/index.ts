@@ -44,7 +44,8 @@ const config = {
   
   // AI Backend Service Configuration (External LangGraph Project)
   aiBackend: {
-    baseUrl: process.env.AI_BACKEND_URL || 'http://localhost:8000', // AI backend base URL
+    baseUrl: process.env.AI_BACKEND_URL || 'http://localhost:8123', // AI backend base URL (LangGraph default port)
+    timeout: parseInt(process.env.AI_BACKEND_TIMEOUT || '120000'), // Request timeout in ms (2 minutes)
   },
   
   // Hugging Face API Configuration

@@ -1,19 +1,14 @@
 /**
  * News Generation Service
  * 
- * AI-powered news generation using Gemini LangGraph approach.
+ * AI-powered news generation using external LangGraph service.
  * RSS haberlerinden kapsamlı, çok kaynaklı haberler üretir.
  */
 
-import config from '@/core/config';
-import axios from 'axios';
 import { 
   NewsGenerationRequest,
   NewsGenerationResult,
-  NewsValidationResult,
-  AIResearchContext,
-  AISourceInfo,
-  AIProcessingStep
+  NewsValidationResult
 } from './news.types';
 import { 
   NEWS_GENERATION_CONFIG,
@@ -28,12 +23,13 @@ import {
   NewsDifference
 } from '@/core/types/database.types';
 import { NewsModel } from './news.model';
+import { LangGraphService, LangGraphResearchRequest } from '@/core/utils/langgraph.util';
 
 /**
  * News Generation Service Class
  * 
- * Gemini tabanlı haber üretimi için ana servis sınıfı.
- * LangGraph yaklaşımını takip eder: Validation → Research → Synthesis → Analysis
+ * LangGraph tabanlı haber üretimi için ana servis sınıfı.
+ * External LangGraph service'ini kullanarak kapsamlı haberler üretir.
  */
 export class NewsGenerationService {
 
@@ -75,19 +71,30 @@ export class NewsGenerationService {
         };
       }
 
-      // 3. AI Research Context oluştur
-      const researchContext: AIResearchContext = {
-        original_title: originalNews.title,
-        original_content: originalNews.content || '',
-        original_url: originalNews.original_url,
-        available_categories: generationInput.available_categories,
-        research_queries: [],
-        sources_found: [],
-        processing_steps: [],
+      // 3. LangGraph research request hazırla
+      const researchRequest: LangGraphResearchRequest = {
+        query: `${originalNews.title}\n\n${originalNews.content || ''}`,
+        max_results: generationInput.max_sources || NEWS_GENERATION_CONFIG.MAX_SOURCES,
+        research_depth: generationInput.research_depth || 'standard',
+        language: 'tr',
       };
 
-      // 4. Multi-step AI processing
-      const processedContent = await this.executeAIWorkflow(researchContext, generationInput);
+      // 4. LangGraph ile araştırma yap
+      const researchResponse = await LangGraphService.researchNewsTopic(researchRequest);
+      
+      if (!researchResponse.success || !researchResponse.answer) {
+        return {
+          status: 'rejected',
+          rejection_reason: researchResponse.error || NEWS_ERROR_MESSAGES.GENERATION_FAILED,
+          processing_time: Date.now() - startTime,
+        };
+      }
+
+      // 5. LangGraph response'unu işle
+      const processedContent = await this.parseLangGraphResponse(
+        researchResponse, 
+        validation.category_match!
+      );
 
       if (!processedContent) {
         return {
@@ -97,7 +104,7 @@ export class NewsGenerationService {
         };
       }
 
-      // 5. Veritabanına kaydet
+      // 6. Veritabanına kaydet
       const savedNews = await this.saveGeneratedNews(
         originalNews,
         processedContent,
@@ -128,6 +135,56 @@ export class NewsGenerationService {
         rejection_reason: NEWS_ERROR_MESSAGES.GENERATION_FAILED,
         processing_time: Date.now() - startTime,
       };
+    }
+  }
+
+  // ==================== LANGGRAPH RESPONSE PROCESSING ====================
+
+  /**
+   * Parse LangGraph Research Response
+   * 
+   * LangGraph'dan gelen response'u parse ederek processed news formatına çevirir.
+   * 
+   * @param response - LangGraph research response
+   * @param category - Seçilen kategori
+   * @returns {Promise<any>}
+   */
+  static async parseLangGraphResponse(
+    response: any,
+    category: Pick<NewsCategory, 'id' | 'name' | 'slug'>
+  ): Promise<any> {
+    try {
+      const content = response.answer || '';
+      const sources = response.sources || [];
+      const confidence = response.confidence_score || 0.8;
+
+      // Content'ten başlık ve gövdeyi ayırmaya çalış
+      const lines = content.split('\n').filter((line: string) => line.trim());
+      const title = lines[0]?.replace(/^#+\s*/, '').trim() || 'AI Tarafından Üretilen Başlık';
+      
+      // İlk satırı başlık olarak kabul et, kalanını content olarak al
+      const mainContent = lines.slice(1).join('\n').trim() || content;
+      
+      // Özet oluştur (ilk 2-3 cümle)
+      const sentences = mainContent.split(/[.!?]+/).filter((s: string) => s.trim());
+      const summary = sentences.slice(0, 3).join('. ').trim() + '.';
+
+      return {
+        title: title,
+        content: mainContent,
+        summary: summary,
+        category_id: category.id,
+        confidence_score: confidence,
+        sources_used: sources.map((source: any) => ({
+          name: source.title || 'Bilinmeyen Kaynak',
+          url: source.url || '#',
+        })),
+        differences_found: [], // LangGraph'dan gelen analiz varsa buraya eklenebilir
+        processing_time: response.processing_time || 0,
+      };
+    } catch (error) {
+      console.error('Error parsing LangGraph response:', error);
+      return null;
     }
   }
 
@@ -218,223 +275,14 @@ export class NewsGenerationService {
     };
   }
 
-  // ==================== AI WORKFLOW EXECUTION ====================
-
-  /**
-   * Execute AI Workflow (LangGraph Style)
-   * 
-   * Gemini LangGraph yaklaşımını takip eden AI workflow'u.
-   * 
-   * @param context - Araştırma context'i
-   * @param input - Generation input
-   * @returns {Promise<any>}
-   */
-  static async executeAIWorkflow(
-    context: AIResearchContext,
-    input: NewsGenerationRequest
-  ): Promise<any> {
-    try {
-      // Step 1: Generate Initial Queries
-      const queries = await this.generateSearchQueries(context);
-      context.research_queries = queries;
-
-      // Step 2: Web Research
-      const sources = await this.conductWebResearch(queries, input.max_sources || 5);
-      context.sources_found = sources;
-
-      // Step 3: Reflection & Gap Analysis
-      const needsMoreResearch = await this.analyzeKnowledgeGaps(context);
-      
-      if (needsMoreResearch && input.research_depth === 'deep') {
-        // Step 4: Iterative Refinement
-        const additionalSources = await this.conductAdditionalResearch(context);
-        context.sources_found.push(...additionalSources);
-      }
-
-      // Step 5: Finalize Answer
-      const finalContent = await this.synthesizeContent(context);
-
-      return finalContent;
-    } catch (error) {
-      console.error('Error in executeAIWorkflow:', error);
-      return null;
-    }
-  }
-
-  /**
-   * Generate Search Queries using Gemini
-   * 
-   * Orijinal haberden araştırma sorguları üretir.
-   * 
-   * @param context - Araştırma context'i
-   * @returns {Promise<string[]>}
-   */
-  static async generateSearchQueries(context: AIResearchContext): Promise<string[]> {
-    const prompt = `
-Aşağıdaki haber için kapsamlı araştırma sorguları oluştur:
-
-Başlık: ${context.original_title}
-İçerik: ${context.original_content.substring(0, NEWS_GENERATION_CONFIG.CONTENT_PREVIEW_LENGTH)}
-
-Görevler:
-1. Ana konuyu derinlemesine araştırmak için 3-5 arama sorgusu oluştur
-2. Farklı bakış açıları ve güncel gelişmeleri kapsasın
-3. Türkçe ve İngilizce sorgular kullan
-4. Doğrulanabilir kaynaklara odaklan
-
-JSON formatında yanıtla:
-{
-  "queries": ["sorgu1", "sorgu2", "sorgu3"]
-}
-`;
-
-    try {
-      const response = await this.callGeminiAPI(prompt);
-      const parsed = JSON.parse(response);
-      return parsed.queries || [];
-    } catch (error) {
-      console.error('Error generating search queries:', error);
-      return [context.original_title]; // Fallback
-    }
-  }
-
-  /**
-   * Conduct Web Research
-   * 
-   * Üretilen sorgularla web araştırması yapar.
-   * 
-   * @param queries - Arama sorguları
-   * @param maxSources - Maksimum kaynak sayısı
-   * @returns {Promise<AISourceInfo[]>}
-   */
-  static async conductWebResearch(queries: string[], maxSources: number): Promise<AISourceInfo[]> {
-    // Bu kısımda gerçek Google Search API veya Tavily gibi bir servis kullanılabilir
-    // Şimdilik mock data döndürüyoruz
-    
-    const mockSources: AISourceInfo[] = [
-      {
-        url: 'https://example.com/source1',
-        title: 'İlgili Kaynak 1',
-        content_snippet: 'Bu konuyla ilgili detaylı bilgi...',
-        reliability_score: 0.8,
-        publish_date: new Date().toISOString(),
-      },
-      {
-        url: 'https://example.com/source2',
-        title: 'İlgili Kaynak 2',
-        content_snippet: 'Farklı bir perspektif...',
-        reliability_score: 0.7,
-        publish_date: new Date().toISOString(),
-      },
-    ];
-
-    return mockSources.slice(0, maxSources);
-  }
-
-  /**
-   * Analyze Knowledge Gaps
-   * 
-   * Toplanan bilgilerdeki eksiklikleri analiz eder.
-   * 
-   * @param context - Araştırma context'i
-   * @returns {Promise<boolean>}
-   */
-  static async analyzeKnowledgeGaps(context: AIResearchContext): Promise<boolean> {
-    const prompt = `
-Aşağıdaki araştırma sonuçlarını analiz et:
-
-Orijinal Konu: ${context.original_title}
-Bulunan Kaynaklar: ${context.sources_found.length} adet
-
-Kaynak Özetleri:
-${context.sources_found.map(s => `- ${s.title}: ${s.content_snippet}`).join('\n')}
-
-Eksik bilgi var mı? Ek araştırma gerekli mi?
-
-JSON formatında yanıtla:
-{
-  "needs_more_research": true/false,
-  "missing_aspects": ["eksik konu 1", "eksik konu 2"],
-  "confidence": 0.8
-}
-`;
-
-    try {
-      const response = await this.callGeminiAPI(prompt);
-      const parsed = JSON.parse(response);
-      return parsed.needs_more_research || false;
-    } catch (error) {
-      console.error('Error analyzing knowledge gaps:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Conduct Additional Research
-   * 
-   * Tespit edilen eksiklikler için ek araştırma yapar.
-   * 
-   * @param context - Araştırma context'i
-   * @returns {Promise<AISourceInfo[]>}
-   */
-  static async conductAdditionalResearch(context: AIResearchContext): Promise<AISourceInfo[]> {
-    // Ek araştırma mock implementation
-    return [];
-  }
-
-  /**
-   * Synthesize Content using Gemini
-   * 
-   * Toplanan bilgileri sentezleyerek yeni haber içeriği oluşturur.
-   * 
-   * @param context - Araştırma context'i
-   * @returns {Promise<any>}
-   */
-  static async synthesizeContent(context: AIResearchContext): Promise<any> {
-    const prompt = `
-Aşağıdaki bilgileri kullanarak kapsamlı bir haber makalesi oluştur:
-
-Orijinal Haber: ${context.original_title}
-Mevcut Kategoriler: ${context.available_categories.map(c => c.name).join(', ')}
-
-Araştırma Kaynakları:
-${context.sources_found.map(s => `- ${s.title} (${s.url}): ${s.content_snippet}`).join('\n')}
-
-Gereksinimler:
-1. Yeni, özgün bir başlık oluştur
-2. Kapsamlı, objektif haber metni yaz (min 500 kelime)
-3. Kısa bir özet ekle
-4. En uygun kategoriyi seç
-5. Kaynaklar arası farklılıkları analiz et
-6. Güven skoru ver (0-1)
-
-JSON formatında yanıtla:
-{
-  "title": "Yeni başlık",
-  "content": "Tam haber metni",
-  "summary": "Kısa özet",
-  "category_id": "seçilen kategori ID",
-  "confidence_score": 0.85,
-  "sources_used": [{"name": "Kaynak adı", "url": "URL"}],
-  "differences_found": [{"title": "Fark başlığı", "description": "Açıklama"}]
-}
-`;
-
-    try {
-      const response = await this.callGeminiAPI(prompt);
-      return JSON.parse(response);
-    } catch (error) {
-      console.error('Error synthesizing content:', error);
-      return null;
-    }
-  }
+  // ==================== CATEGORY MATCHING ====================
 
   // ==================== HELPER METHODS ====================
 
   /**
-   * Find Best Category Match
+   * Find Best Category Match using AI
    * 
-   * Haber için en uygun kategoriyi bulur.
+   * AI kullanarak haberin en uygun kategorisini bulur.
    * 
    * @param originalNews - Orijinal haber
    * @param categories - Mevcut kategoriler
@@ -444,38 +292,21 @@ JSON formatında yanıtla:
     originalNews: OriginalNews,
     categories: Pick<NewsCategory, 'id' | 'name' | 'slug'>[]
   ): Promise<Pick<NewsCategory, 'id' | 'name' | 'slug'> | null> {
-    const prompt = `
-Bu haber hangi kategoriye ait olmalı?
-
-Başlık: ${originalNews.title}
-İçerik: ${originalNews.content?.substring(0, NEWS_GENERATION_CONFIG.CATEGORY_PREVIEW_LENGTH) || 'İçerik mevcut değil'}
-
-Mevcut Kategoriler:
-${categories.map(c => `- ${c.name} (${c.slug})`).join('\n')}
-
-En uygun kategoriyi seç veya hiçbiri uygun değilse null döndür.
-
-JSON formatında yanıtla:
-{
-  "category_id": "kategori_id_veya_null",
-  "confidence": 0.8,
-  "reasoning": "Neden bu kategori seçildi"
-}
-`;
-
-    try {
-      const response = await this.callGeminiAPI(prompt);
-      const parsed = JSON.parse(response);
+    // Basit kategori eşleştirme - ileride AI ile geliştirilebilir
+    const content = (originalNews.title + ' ' + (originalNews.content || '')).toLowerCase();
+    
+    // Anahtar kelime bazlı basit eşleştirme
+    for (const category of categories) {
+      const categoryKeywords = category.name.toLowerCase().split(' ');
+      const hasMatch = categoryKeywords.some(keyword => content.includes(keyword));
       
-      if (parsed.category_id && parsed.confidence >= NEWS_VALIDATION_RULES.CATEGORY_MATCH_THRESHOLD) {
-        return categories.find(c => c.id === parsed.category_id) || null;
+      if (hasMatch) {
+        return category;
       }
-      
-      return null;
-    } catch (error) {
-      console.error('Error finding category match:', error);
-      return null;
     }
+
+    // Varsayılan kategori döndür (ilk kategori)
+    return categories[0] || null;
   }
 
   /**
@@ -540,100 +371,4 @@ JSON formatında yanıtla:
       return {};
     }
   }
-
-  /**
-   * Call Gemini API
-   * 
-   * AI Backend'e (Google Gemini LangGraph projesi) istek gönderir.
-   * 
-   * @param prompt - AI prompt'u
-   * @returns {Promise<string>}
-   */
-  static async callGeminiAPI(prompt: string): Promise<string> {
-    try {
-      const aiBackendUrl = config.aiBackend.baseUrl;
-      
-      // AI Backend'e research request gönder
-      const requestPayload = {
-        query: prompt,
-        max_results: NEWS_GENERATION_CONFIG.MAX_SOURCES,
-        include_sources: true,
-        research_depth: NEWS_GENERATION_CONFIG.AI_RESEARCH_DEPTH,
-      };
-
-      const response = await axios.post(
-        `${aiBackendUrl}/research`,
-        requestPayload,
-        {
-          timeout: NEWS_GENERATION_CONFIG.AI_BACKEND_TIMEOUT,
-          headers: {
-            'Content-Type': 'application/json',
-          }
-        }
-      );
-
-      // AI Backend'den gelen response'u işle
-      if (response.status === 200 && response.data) {
-        if (response.data.answer) {
-          return response.data.answer;
-        }
-        // Fallback: Eğer expected format değilse raw response'u string olarak döndür
-        return JSON.stringify(response.data);
-      }
-
-      // Response başarısız ise mock döndür
-      console.warn(`AI Backend returned status ${response.status}, falling back to mock response`);
-      return this.getMockResponse();
-
-    } catch (error) {
-      console.error('Error calling AI Backend:', error);
-      
-      // Axios hatalarını kontrol et
-      if (axios.isAxiosError(error)) {
-        if (error.code === 'ECONNREFUSED') {
-          console.warn('AI Backend connection refused, falling back to mock response');
-          return this.getMockResponse();
-        }
-        
-        if (error.code === 'ENOTFOUND') {
-          console.warn('AI Backend not found, falling back to mock response');
-          return this.getMockResponse();
-        }
-        
-        if (error.code === 'ETIMEDOUT') {
-          console.warn('AI Backend timeout, falling back to mock response');
-          return this.getMockResponse();
-        }
-      }
-      
-      // Diğer hatalar için de mock response döndür
-      console.warn('AI Backend error, falling back to mock response:', error);
-      return this.getMockResponse();
-    }
-  }
-
-  /**
-   * Get Mock Response (Fallback)
-   * 
-   * AI Backend erişilemediğinde kullanılacak mock response.
-   * 
-   * @returns {string}
-   */
-  private static getMockResponse(): string {
-    const mockResponse = {
-      title: "AI Tarafından Üretilen Başlık",
-      content: "AI tarafından üretilen kapsamlı haber içeriği. Bu içerik, orijinal haberin analizi ve çoklu kaynak araştırması sonucunda oluşturulmuştur.",
-      summary: "Kısa özet: AI tarafından işlenen haber özeti",
-      category_id: null, // Will be determined by category matching
-      confidence_score: 0.75,
-      sources_used: [
-        { name: "Örnek Kaynak", url: "https://example.com/source" }
-      ],
-      differences_found: [
-        { title: "Analiz Sonucu", description: "AI analizi tamamlandı" }
-      ]
-    };
-
-    return JSON.stringify(mockResponse);
-  }
-} 
+}
