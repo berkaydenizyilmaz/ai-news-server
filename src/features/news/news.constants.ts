@@ -129,6 +129,11 @@ export const NEWS_GENERATION_CONFIG = {
   MAX_RESEARCH_ITERATIONS: 3,
   SEARCH_TIMEOUT: 30000, // 30 saniye
   
+  // AI Backend configuration
+  AI_BACKEND_TIMEOUT: 30000, // 30 saniye
+  AI_BACKEND_RETRY_ATTEMPTS: 3,
+  AI_RESEARCH_DEPTH: 'comprehensive' as const, // 'basic' | 'comprehensive' | 'deep'
+  
   // Quality filters
   VIDEO_KEYWORDS: [
     'video', 'izle', 'detaylar videoda', 'videolu haber',

@@ -42,6 +42,11 @@ const config = {
     apiKey: process.env.GEMINI_API_KEY!, // Google Gemini API key (required)
   },
   
+  // AI Backend Service Configuration (External LangGraph Project)
+  aiBackend: {
+    baseUrl: process.env.AI_BACKEND_URL || 'http://localhost:8000', // AI backend base URL
+  },
+  
   // Hugging Face API Configuration
   huggingFace: {
     apiKey: process.env.HUGGING_FACE_API_KEY!, // Hugging Face API key (required)
