@@ -23,6 +23,9 @@ export const SCHEDULER_CONFIG = {
   // Cleanup Schedule
   CLEANUP_INTERVAL: '0 2 * * *', // Her gün saat 02:00'da
   CLEANUP_RETENTION_DAYS: 30, // 30 günden eski logları temizle
+  
+  // Graceful shutdown
+  GRACEFUL_SHUTDOWN_TIMEOUT: 60000, // 60 saniye
 } as const;
 
 // ==================== RETRY CONFIG ====================

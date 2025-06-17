@@ -6,6 +6,7 @@
  */
 
 import { supabaseAdmin } from '@/database';
+import { NEWS_VALIDATION_RULES } from './news.constants';
 import { 
   ProcessedNews, 
   NewsCategory, 
@@ -631,7 +632,10 @@ export class NewsModel {
         updateData.retry_count = supabaseAdmin.rpc('increment', { x: 1 });
         
         // Next retry time hesapla (exponential backoff)
-        const retryDelay = Math.min(120000 * Math.pow(2, updateData.retry_count), 600000);
+        const retryDelay = Math.min(
+          NEWS_VALIDATION_RULES.RETRY_BASE_DELAY * Math.pow(2, updateData.retry_count), 
+          NEWS_VALIDATION_RULES.RETRY_MAX_DELAY
+        );
         updateData.next_retry_at = new Date(Date.now() + retryDelay).toISOString();
       }
 
@@ -672,7 +676,7 @@ export class NewsModel {
         .from('original_news')
         .select('*')
         .eq('processing_status', 'failed')
-        .lt('retry_count', 3)
+        .lt('retry_count', NEWS_VALIDATION_RULES.MAX_RETRY_ATTEMPTS)
         .lte('next_retry_at', new Date().toISOString())
         .order('next_retry_at', { ascending: true })
         .limit(limit);

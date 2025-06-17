@@ -273,7 +273,7 @@ export class NewsGenerationService {
 Aşağıdaki haber için kapsamlı araştırma sorguları oluştur:
 
 Başlık: ${context.original_title}
-İçerik: ${context.original_content.substring(0, 1000)}
+İçerik: ${context.original_content.substring(0, NEWS_GENERATION_CONFIG.CONTENT_PREVIEW_LENGTH)}
 
 Görevler:
 1. Ana konuyu derinlemesine araştırmak için 3-5 arama sorgusu oluştur
@@ -447,7 +447,7 @@ JSON formatında yanıtla:
 Bu haber hangi kategoriye ait olmalı?
 
 Başlık: ${originalNews.title}
-İçerik: ${originalNews.content?.substring(0, 500) || 'İçerik mevcut değil'}
+İçerik: ${originalNews.content?.substring(0, NEWS_GENERATION_CONFIG.CATEGORY_PREVIEW_LENGTH) || 'İçerik mevcut değil'}
 
 Mevcut Kategoriler:
 ${categories.map(c => `- ${c.name} (${c.slug})`).join('\n')}

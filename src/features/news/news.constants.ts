@@ -120,6 +120,10 @@ export const NEWS_GENERATION_CONFIG = {
   MIN_TITLE_LENGTH: 10,
   MAX_TITLE_LENGTH: 150,
   
+  // Content preview for AI prompts
+  CONTENT_PREVIEW_LENGTH: 1000, // AI prompt'larında gösterilecek içerik uzunluğu
+  CATEGORY_PREVIEW_LENGTH: 500, // Kategori eşleştirme için içerik uzunluğu
+  
   // Research parameters
   MAX_SEARCH_QUERIES: 5,
   MAX_RESEARCH_ITERATIONS: 3,
@@ -159,6 +163,10 @@ export const NEWS_VALIDATION_RULES = {
   // Processing limits
   MAX_RETRY_ATTEMPTS: 3,
   BATCH_SIZE: 5,
+  
+  // Retry timing (milliseconds)
+  RETRY_BASE_DELAY: 120000, // 2 dakika
+  RETRY_MAX_DELAY: 600000,  // 10 dakika
 } as const;
 
 

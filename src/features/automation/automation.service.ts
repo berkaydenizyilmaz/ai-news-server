@@ -194,7 +194,7 @@ export class AutomationService extends EventEmitter {
 
       // Graceful shutdown
       if (request.graceful_shutdown) {
-        await this.jobQueue.waitForActiveJobs(request.timeout || 60000);
+        await this.jobQueue.waitForActiveJobs(request.timeout || SCHEDULER_CONFIG.GRACEFUL_SHUTDOWN_TIMEOUT);
       }
 
       // Servisleri durdur
@@ -263,8 +263,8 @@ export class AutomationService extends EventEmitter {
     try {
       const jobId = this.jobQueue.addJob({
         type: request.job_type,
-        priority: request.priority || 5,
-        max_retries: 3,
+        priority: request.priority || JOB_PRIORITIES.NORMAL,
+        max_retries: RETRY_CONFIG.RSS_MAX_RETRIES,
         data: request.job_data || {},
         metadata: { manual: true },
       } as any);
