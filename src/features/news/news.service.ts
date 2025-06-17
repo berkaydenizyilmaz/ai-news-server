@@ -697,10 +697,10 @@ export class NewsService {
       // Mock statistics - gerçek implementasyonda SQL aggregate fonksiyonları kullanılmalı
       const stats: NewsStatistics = {
         total_news: allNews?.total || 0,
-        published_news: 0, // SELECT COUNT(*) FROM processed_news WHERE status = 'published'
-        pending_news: 0,   // SELECT COUNT(*) FROM processed_news WHERE status = 'pending'
-        processing_news: 0, // SELECT COUNT(*) FROM processed_news WHERE status = 'processing'
-        rejected_news: 0,  // SELECT COUNT(*) FROM processed_news WHERE status = 'rejected'
+        published_news: 0, // SELECT COUNT(*) FROM original_news WHERE processing_status = 'completed'
+        pending_news: 0,   // SELECT COUNT(*) FROM original_news WHERE processing_status = 'pending'
+        processing_news: 0, // SELECT COUNT(*) FROM original_news WHERE processing_status = 'processing'
+        rejected_news: 0,  // SELECT COUNT(*) FROM original_news WHERE processing_status = 'rejected'
         categories_count: categories?.total || 0,
         avg_confidence_score: 0.75, // SELECT AVG(confidence_score) FROM processed_news
         total_sources: 0, // SELECT COUNT(*) FROM news_sources
