@@ -6,6 +6,7 @@
  */
 
 import config from '@/core/config';
+import axios from 'axios';
 import { 
   NewsGenerationRequest,
   NewsGenerationResult,
@@ -560,26 +561,24 @@ JSON formatında yanıtla:
         research_depth: NEWS_GENERATION_CONFIG.AI_RESEARCH_DEPTH,
       };
 
-      const response = await fetch(
+      const response = await axios.post(
         `${aiBackendUrl}/research`,
+        requestPayload,
         {
-          method: 'POST',
+          timeout: NEWS_GENERATION_CONFIG.AI_BACKEND_TIMEOUT,
           headers: {
             'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(requestPayload),
-          signal: AbortSignal.timeout(NEWS_GENERATION_CONFIG.AI_BACKEND_TIMEOUT)
+          }
         }
       );
 
       // AI Backend'den gelen response'u işle
-      if (response.ok && response.status === 200) {
-        const data: any = await response.json();
-        if (data && data.answer) {
-          return data.answer;
+      if (response.status === 200 && response.data) {
+        if (response.data.answer) {
+          return response.data.answer;
         }
         // Fallback: Eğer expected format değilse raw response'u string olarak döndür
-        return JSON.stringify(data);
+        return JSON.stringify(response.data);
       }
 
       // Response başarısız ise mock döndür
@@ -589,16 +588,22 @@ JSON formatında yanıtla:
     } catch (error) {
       console.error('Error calling AI Backend:', error);
       
-      // Network hatası için mock response döndür
-      if (error instanceof TypeError && error.message.includes('fetch')) {
-        console.warn('AI Backend connection failed, falling back to mock response');
-        return this.getMockResponse();
-      }
-      
-      // Timeout hatası için mock response döndür
-      if (error instanceof DOMException && error.name === 'TimeoutError') {
-        console.warn('AI Backend timeout, falling back to mock response');
-        return this.getMockResponse();
+      // Axios hatalarını kontrol et
+      if (axios.isAxiosError(error)) {
+        if (error.code === 'ECONNREFUSED') {
+          console.warn('AI Backend connection refused, falling back to mock response');
+          return this.getMockResponse();
+        }
+        
+        if (error.code === 'ENOTFOUND') {
+          console.warn('AI Backend not found, falling back to mock response');
+          return this.getMockResponse();
+        }
+        
+        if (error.code === 'ETIMEDOUT') {
+          console.warn('AI Backend timeout, falling back to mock response');
+          return this.getMockResponse();
+        }
       }
       
       // Diğer hatalar için de mock response döndür
