@@ -100,10 +100,6 @@ export class NewsModel {
         query = query.eq('category_id', queryParams.category_id);
       }
 
-      if (queryParams.status) {
-        query = query.eq('status', queryParams.status);
-      }
-
       if (queryParams.date_from) {
         query = query.gte('created_at', queryParams.date_from);
       }

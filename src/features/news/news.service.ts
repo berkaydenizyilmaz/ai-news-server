@@ -167,7 +167,6 @@ export class NewsService {
           page: 1,
           limit: 5,
           category_id: newsWithRelations.category_id,
-          status: 'published',
           sort_by: 'created_at',
           sort_order: 'desc',
         });
@@ -622,16 +621,6 @@ export class NewsService {
           let success = false;
 
           switch (operationInput.operation) {
-            case 'publish':
-              const publishResult = await this.updateProcessedNews(newsId, { status: 'published' });
-              success = publishResult.success;
-              break;
-
-            case 'unpublish':
-              const unpublishResult = await this.updateProcessedNews(newsId, { status: 'pending' });
-              success = unpublishResult.success;
-              break;
-
             case 'delete':
               const deleteResult = await this.deleteProcessedNews(newsId);
               success = deleteResult.success;

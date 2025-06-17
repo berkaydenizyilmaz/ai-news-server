@@ -161,14 +161,7 @@ export const NEWS_VALIDATION_RULES = {
   BATCH_SIZE: 5,
 } as const;
 
-// ==================== STATUS TYPES ====================
 
-export const NEWS_STATUSES = [
-  'pending',
-  'processing', 
-  'published',
-  'rejected'
-] as const;
 
 // ==================== CATEGORY VALIDATION ====================
 

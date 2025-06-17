@@ -14,10 +14,10 @@
 export type UserRole = 'visitor' | 'user' | 'moderator' | 'admin';
 
 /**
- * News Status Type
- * Haber durumu tipleri
+ * Original News Processing Status Type
+ * Orijinal haberlerin AI işleme durumu
  */
-export type NewsStatus = 'pending' | 'processing' | 'published' | 'rejected';
+export type OriginalNewsProcessingStatus = 'pending' | 'processing' | 'completed' | 'rejected' | 'failed' | 'skipped';
 
 /**
  * Forum Status Type
@@ -171,6 +171,11 @@ export interface OriginalNews {
   rss_source_id?: string;
   content_embedding?: number[]; // Vector embedding for similarity search
   processed_time?: number; // AI processing time in seconds
+  processing_status: OriginalNewsProcessingStatus;
+  retry_count: number;
+  max_retries: number;
+  next_retry_at?: string;
+  last_error_message?: string;
   created_at: string;
   updated_at: string;
 }
@@ -188,7 +193,6 @@ export interface ProcessedNews {
   summary?: string;
   image_url?: string;
   category_id?: string;
-  status: NewsStatus;
   confidence_score?: number;
   differences_analysis?: string;
   view_count: number;

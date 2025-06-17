@@ -8,7 +8,6 @@
 import { z } from 'zod';
 import { 
   NEWS_QUERY_CONSTRAINTS, 
-  NEWS_STATUSES,
   CATEGORY_VALIDATION_RULES 
 } from './news.constants';
 
@@ -44,10 +43,6 @@ export const CreateNewsSchema = z.object({
     .string()
     .uuid('Geçersiz kategori ID\'si')
     .optional(),
-  
-  status: z
-    .enum(NEWS_STATUSES, { errorMap: () => ({ message: 'Geçersiz durum' }) })
-    .default('pending'),
 });
 
 /**
@@ -81,10 +76,6 @@ export const UpdateNewsSchema = z.object({
   category_id: z
     .string()
     .uuid('Geçersiz kategori ID\'si')
-    .optional(),
-  
-  status: z
-    .enum(NEWS_STATUSES, { errorMap: () => ({ message: 'Geçersiz durum' }) })
     .optional(),
   
   confidence_score: z
@@ -125,10 +116,6 @@ export const NewsQuerySchema = z.object({
   category_id: z
     .string()
     .uuid('Geçersiz kategori ID\'si')
-    .optional(),
-  
-  status: z
-    .enum(NEWS_STATUSES, { errorMap: () => ({ message: 'Geçersiz durum' }) })
     .optional(),
   
   sort_by: z
@@ -300,7 +287,7 @@ export const BulkNewsOperationSchema = z.object({
     .max(50, 'Maksimum 50 haber seçilebilir'),
   
   operation: z
-    .enum(['publish', 'unpublish', 'delete', 'update_category'], {
+    .enum(['delete', 'update_category'], {
       errorMap: () => ({ message: 'Geçersiz işlem' })
     }),
   
@@ -308,10 +295,6 @@ export const BulkNewsOperationSchema = z.object({
     category_id: z
       .string()
       .uuid('Geçersiz kategori ID\'si')
-      .optional(),
-    
-    status: z
-      .enum(NEWS_STATUSES, { errorMap: () => ({ message: 'Geçersiz durum' }) })
       .optional(),
   }).optional(),
 });

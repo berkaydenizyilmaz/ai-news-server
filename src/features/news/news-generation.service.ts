@@ -143,7 +143,7 @@ export class NewsGenerationService {
    */
   static async validateNewsContent(
     originalNews: OriginalNews,
-    availableCategories: NewsCategory[]
+    availableCategories: Pick<NewsCategory, 'id' | 'name' | 'slug'>[]
   ): Promise<NewsValidationResult> {
     const rejectionReasons: string[] = [];
     let qualityScore = 1.0;
@@ -437,12 +437,12 @@ JSON formatında yanıtla:
    * 
    * @param originalNews - Orijinal haber
    * @param categories - Mevcut kategoriler
-   * @returns {Promise<NewsCategory | null>}
+   * @returns {Promise<Pick<NewsCategory, 'id' | 'name' | 'slug'> | null>}
    */
   static async findBestCategoryMatch(
     originalNews: OriginalNews,
-    categories: NewsCategory[]
-  ): Promise<NewsCategory | null> {
+    categories: Pick<NewsCategory, 'id' | 'name' | 'slug'>[]
+  ): Promise<Pick<NewsCategory, 'id' | 'name' | 'slug'> | null> {
     const prompt = `
 Bu haber hangi kategoriye ait olmalı?
 
@@ -450,7 +450,7 @@ Başlık: ${originalNews.title}
 İçerik: ${originalNews.content?.substring(0, 500) || 'İçerik mevcut değil'}
 
 Mevcut Kategoriler:
-${categories.map(c => `- ${c.name} (${c.slug}): ${c.description || ''}`).join('\n')}
+${categories.map(c => `- ${c.name} (${c.slug})`).join('\n')}
 
 En uygun kategoriyi seç veya hiçbiri uygun değilse null döndür.
 
@@ -490,7 +490,7 @@ JSON formatında yanıtla:
   static async saveGeneratedNews(
     originalNews: OriginalNews,
     generatedContent: any,
-    category: NewsCategory
+    category: Pick<NewsCategory, 'id' | 'name' | 'slug'>
   ): Promise<{
     processed_news?: ProcessedNews;
     sources?: NewsSource[];
@@ -504,7 +504,6 @@ JSON formatında yanıtla:
         summary: generatedContent.summary,
         image_url: originalNews.image_url,
         category_id: category.id,
-        status: 'published',
       });
 
       if (!processedNews) {

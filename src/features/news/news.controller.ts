@@ -244,7 +244,7 @@ export class NewsController {
       }
 
       // Servis çağrısı
-      const result = await NewsService.createNewsCategory(validationResult.data);
+      const result = await NewsService.createCategory(validationResult.data);
 
       // Yanıt
       const statusCode = result.success ? HTTP_STATUS.CREATED : HTTP_STATUS.BAD_REQUEST;

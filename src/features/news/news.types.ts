@@ -1,8 +1,8 @@
 /**
- * News Feature Type Definitions
+ * News Feature Types and Interfaces
  * 
- * News modülü için tüm TypeScript tip tanımları.
- * Request/Response DTO'ları, servis tipleri ve news yapıları.
+ * News modülü için TypeScript tip tanımlamaları.
+ * Request/Response DTO'ları ve business logic tipleri.
  */
 
 import { 
@@ -10,11 +10,10 @@ import {
   NewsCategory, 
   NewsSource, 
   NewsDifference,
-  OriginalNews,
-  NewsStatus 
+  OriginalNews
 } from '@/core/types/database.types';
 
-// ==================== REQUEST DTOs ====================
+// ==================== REQUEST DTO TYPES ====================
 
 /**
  * News Creation Request DTO
@@ -25,7 +24,6 @@ export interface CreateNewsRequest {
   summary?: string;
   image_url?: string;
   category_id?: string;
-  status?: NewsStatus;
 }
 
 /**
@@ -37,7 +35,6 @@ export interface UpdateNewsRequest {
   summary?: string;
   image_url?: string;
   category_id?: string;
-  status?: NewsStatus;
   confidence_score?: number;
   differences_analysis?: string;
 }
@@ -50,7 +47,6 @@ export interface NewsQueryRequest {
   limit?: number;
   search?: string;
   category_id?: string;
-  status?: NewsStatus;
   sort_by?: 'created_at' | 'updated_at' | 'published_at' | 'view_count';
   sort_order?: 'asc' | 'desc';
   date_from?: string;
@@ -121,7 +117,7 @@ export interface NewsGenerationResult {
 export interface NewsValidationResult {
   is_valid: boolean;
   is_suitable: boolean;
-  category_match?: NewsCategory;
+  category_match?: Pick<NewsCategory, 'id' | 'name' | 'slug'>;
   rejection_reasons: string[];
   quality_score: number;
   content_analysis: {
@@ -151,7 +147,7 @@ export interface AIResearchContext {
   original_title: string;
   original_content: string;
   original_url: string;
-  available_categories: NewsCategory[];
+  available_categories: Pick<NewsCategory, 'id' | 'name' | 'slug'>[];
   research_queries: string[];
   sources_found: AISourceInfo[];
   processing_steps: AIProcessingStep[];
@@ -268,7 +264,6 @@ export interface NewsStatistics {
 export interface NewsSearchFilters {
   query?: string;
   categories?: string[];
-  status?: NewsStatus[];
   confidence_min?: number;
   confidence_max?: number;
   date_range?: {
@@ -294,10 +289,9 @@ export interface NewsSortOptions {
  */
 export interface BulkNewsOperationRequest {
   news_ids: string[];
-  operation: 'publish' | 'unpublish' | 'delete' | 'update_category';
+  operation: 'delete' | 'update_category';
   data?: {
     category_id?: string;
-    status?: NewsStatus;
   };
 }
 
