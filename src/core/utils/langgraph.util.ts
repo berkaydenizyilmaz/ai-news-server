@@ -58,7 +58,7 @@ export type LangGraphResearchInput = z.infer<typeof langGraphResearchSchema>;
 
 export class LangGraphService {
   private static baseUrl = config.aiBackend.baseUrl;
-  private static timeout = config.aiBackend.timeout;
+  private static timeout = 30000; // 30 saniye (test için kısaltıldı)
 
   /**
    * Research News Topic using LangGraph Agent
@@ -127,6 +127,8 @@ export class LangGraphService {
    */
   private static async createThread(): Promise<{success: boolean, thread_id?: string}> {
     try {
+      console.log(`LangGraph thread oluşturuluyor: ${this.baseUrl}/threads`);
+      
       const response: AxiosResponse = await axios.post(
         `${this.baseUrl}/threads`,
         {
@@ -144,15 +146,25 @@ export class LangGraphService {
       );
 
       if (response.status === 200 && response.data?.thread_id) {
+        console.log(`✅ LangGraph thread oluşturuldu: ${response.data.thread_id}`);
         return {
           success: true,
           thread_id: response.data.thread_id,
         };
       }
 
+      console.log(`❌ LangGraph thread oluşturulamadı: Status ${response.status}`);
       throw new Error(`Invalid response: ${response.status}`);
-    } catch (error) {
-      console.error('Failed to create LangGraph thread:', error);
+    } catch (error: any) {
+      if (error.code === 'ECONNRESET') {
+        console.error('❌ LangGraph bağlantısı kesildi (ECONNRESET) - SSH tunnel kontrol et');
+      } else if (error.code === 'ECONNABORTED') {
+        console.error(`❌ LangGraph timeout (${this.timeout}ms) - Servis çok yavaş veya erişilemiyor`);
+      } else if (error.code === 'ECONNREFUSED') {
+        console.error('❌ LangGraph servisine bağlanılamıyor - Servis çalışmıyor olabilir');
+      } else {
+        console.error('❌ LangGraph thread oluşturma hatası:', error.message);
+      }
       return { success: false };
     }
   }

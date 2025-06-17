@@ -5,10 +5,27 @@
  */
 
 import { EventEmitter } from 'events';
-import { AutomationJob, QueueStatistics } from './automation.types';
-import { RETRY_CONFIG, AUTOMATION_ERROR_MESSAGES } from './automation.constants';
+import { 
+  SCHEDULER_CONFIG, 
+  AUTOMATION_SUCCESS_MESSAGES, 
+  AUTOMATION_ERROR_MESSAGES,
+  RETRY_CONFIG,
+  JOB_PRIORITIES
+} from './automation.constants';
+import {
+  AutomationJob,
+  RssFetchJob,
+  AiProcessingJob,
+  BatchProcessingJob,
+  CleanupJob,
+  HealthCheckJob,
+  JobStatus,
+  QueueStatistics
+} from './automation.types';
 import { RssService } from '@/features/rss/rss.service';
 import { NewsGenerationService } from '@/features/news/news-generation.service';
+import { NewsModel } from '@/features/news/news.model';
+import { NewsGenerationRequest } from '@/features/news/news.types';
 
 export class JobQueueService extends EventEmitter {
   private jobQueue: AutomationJob[] = [];
@@ -137,9 +154,89 @@ export class JobQueueService extends EventEmitter {
 
   /**
    * Execute AI Processing Job
+   * 
+   * Bekleyen haberleri AI ile işleme job'u.
    */
-  private async executeAiProcessingJob(job: any): Promise<any> {
-    return await NewsGenerationService.generateNews(job.data);
+  private async executeAiProcessingJob(job: AiProcessingJob): Promise<void> {
+    console.log('=== AI Processing Job Başlatıldı ===');
+    console.log(`Job ID: ${job.id}`);
+    
+    try {
+      // Bekleyen haberleri getir
+      console.log('Bekleyen haberler getiriliyor...');
+      const pendingNews = await NewsModel.getPendingNewsForProcessing(SCHEDULER_CONFIG.AI_BATCH_SIZE);
+      
+      console.log(`Bulunan bekleyen haber sayısı: ${pendingNews.length}`);
+      
+      if (pendingNews.length === 0) {
+        console.log('İşlenecek bekleyen haber bulunamadı');
+        return;
+      }
+
+      // Kategorileri getir
+      console.log('Kategoriler getiriliyor...');
+      const categories = await NewsModel.getNewsCategories({
+        page: 1,
+        limit: 100,
+        sort_by: 'name',
+        sort_order: 'asc',
+      });
+
+      if (!categories || categories.categories.length === 0) {
+        console.log('HATA: Kategori bulunamadı!');
+        throw new Error('No categories available for processing');
+      }
+
+      console.log(`Bulunan kategori sayısı: ${categories.categories.length}`);
+
+      // Her haberi işle
+      for (let i = 0; i < pendingNews.length; i++) {
+        const originalNews = pendingNews[i];
+        console.log(`\n--- Haber ${i + 1}/${pendingNews.length} İşleniyor ---`);
+        console.log(`Haber ID: ${originalNews.id}`);
+        console.log(`Başlık: ${originalNews.title?.substring(0, 50)}...`);
+        
+        try {
+          // Status'u processing'e çek
+          console.log('Status processing olarak güncelleniyor...');
+          await NewsModel.updateOriginalNewsStatus(originalNews.id, 'processing');
+
+          // AI generation request hazırla
+          const generationRequest: NewsGenerationRequest = {
+            original_news_id: originalNews.id,
+            available_categories: categories.categories.map(cat => ({
+              id: cat.id,
+              name: cat.name,
+              slug: cat.slug,
+            })),
+            max_sources: 3,
+            research_depth: 'standard',
+            force_regenerate: false,
+          };
+
+          console.log('AI generation başlatılıyor...');
+          const result = await NewsGenerationService.generateNews(generationRequest);
+
+          if (result.status === 'success') {
+            console.log('✅ AI generation başarılı!');
+            console.log(`İşlenmiş haber ID: ${result.processed_news?.id}`);
+            await NewsModel.updateOriginalNewsStatus(originalNews.id, 'completed');
+          } else {
+            console.log('❌ AI generation reddedildi');
+            console.log(`Reddetme sebebi: ${result.rejection_reason}`);
+            await NewsModel.updateOriginalNewsStatus(originalNews.id, 'rejected', result.rejection_reason);
+          }
+        } catch (error) {
+          console.log(`❌ Haber işleme hatası: ${error instanceof Error ? error.message : 'Bilinmeyen hata'}`);
+          await NewsModel.updateOriginalNewsStatus(originalNews.id, 'failed', error instanceof Error ? error.message : 'Processing failed');
+        }
+      }
+
+      console.log('=== AI Processing Job Tamamlandı ===\n');
+    } catch (error) {
+      console.error('AI Processing Job genel hatası:', error);
+      throw error;
+    }
   }
 
   /**
