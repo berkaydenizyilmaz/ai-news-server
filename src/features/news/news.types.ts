@@ -9,7 +9,6 @@ import {
   ProcessedNews, 
   NewsCategory, 
   NewsSource, 
-  NewsDifference,
   OriginalNews
 } from '@/core/types/database.types';
 
@@ -105,7 +104,6 @@ export interface NewsGenerationResult {
   status: 'success' | 'rejected';
   processed_news?: ProcessedNews;
   sources?: NewsSource[];
-  differences?: NewsDifference[];
   rejection_reason?: string;
   processing_time: number;
   confidence_score?: number;
@@ -217,7 +215,6 @@ export interface NewsDetailResponse extends ProcessedNews {
   category?: NewsCategory;
   original_news?: OriginalNews;
   sources?: NewsSource[];
-  differences?: NewsDifference[];
   related_news?: ProcessedNews[];
 }
 
@@ -230,7 +227,6 @@ export interface NewsWithRelations extends ProcessedNews {
   category?: NewsCategory;
   original_news?: OriginalNews;
   sources?: NewsSource[];
-  differences?: NewsDifference[];
 }
 
 /**

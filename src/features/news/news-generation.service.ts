@@ -19,8 +19,7 @@ import {
   OriginalNews, 
   NewsCategory, 
   ProcessedNews,
-  NewsSource,
-  NewsDifference
+  NewsSource
 } from '@/core/types/database.types';
 import { NewsModel } from './news.model';
 import { LangGraphService, LangGraphResearchRequest } from '@/core/utils/langgraph.util';
@@ -64,6 +63,9 @@ export class NewsGenerationService {
       );
 
       if (!validation.is_valid || !validation.is_suitable) {
+        // Validation failed - rejected status
+        await NewsModel.updateOriginalNewsStatus(originalNews.id, 'rejected', validation.rejection_reasons.join(', '));
+        
         return {
           status: 'rejected',
           rejection_reason: validation.rejection_reasons.join(', '),
@@ -109,6 +111,8 @@ export class NewsGenerationService {
 
       // 6. Kategori kontrolü - NONE ise skipped yap
       if (processedContent.category_slug === 'NONE' || !processedContent.category_match) {
+        await NewsModel.updateOriginalNewsStatus(originalNews.id, 'rejected', NEWS_ERROR_MESSAGES.GENERATION_NO_CATEGORY_MATCH);
+        
         return {
           status: 'rejected',
           rejection_reason: NEWS_ERROR_MESSAGES.GENERATION_NO_CATEGORY_MATCH,
@@ -118,9 +122,12 @@ export class NewsGenerationService {
 
       // 7. Confidence kontrolü
       if (processedContent.confidence_score < NEWS_VALIDATION_RULES.MIN_CONFIDENCE) {
+        const rejectionReason = `Düşük güven skoru: ${processedContent.confidence_score}`;
+        await NewsModel.updateOriginalNewsStatus(originalNews.id, 'rejected', rejectionReason);
+        
         return {
           status: 'rejected',
-          rejection_reason: `Düşük güven skoru: ${processedContent.confidence_score}`,
+          rejection_reason: rejectionReason,
           processing_time: Date.now() - startTime,
         };
       }
@@ -144,7 +151,6 @@ export class NewsGenerationService {
         status: 'success',
         processed_news: savedNews.processed_news,
         sources: savedNews.sources,
-        differences: savedNews.differences,
         processing_time: Date.now() - startTime,
         confidence_score: processedContent.confidence_score,
       };
@@ -221,10 +227,6 @@ export class NewsGenerationService {
           url: source.url || '#',
           snippet: source.snippet || '',
           reliability_score: source.reliability_score || 0.5,
-        })),
-        differences_found: (parsedResponse.differences || []).map((diff: any) => ({
-          title: diff.title || 'Fark',
-          description: diff.description || '',
         })),
         processing_time: response.processing_time || 0,
       };
@@ -372,23 +374,31 @@ export class NewsGenerationService {
   ): Promise<{
     processed_news?: ProcessedNews;
     sources?: NewsSource[];
-    differences?: NewsDifference[];
   }> {
     try {
-      // 1. Processed news oluştur
+      // 1. Differences'ı string'e çevir
+      const differencesAnalysis = generatedContent.differences_found && generatedContent.differences_found.length > 0
+        ? JSON.stringify(generatedContent.differences_found)
+        : null;
+
+      // 2. Processed news oluştur
       const processedNews = await NewsModel.createProcessedNews({
+        original_news_id: originalNews.id,
         title: generatedContent.title,
+        slug: generatedContent.slug,
         content: generatedContent.content,
         summary: generatedContent.summary,
-        image_url: originalNews.image_url,
+        image_url: originalNews.image_url, // RSS'den gelen resim
         category_id: category.id,
+        confidence_score: generatedContent.confidence_score,
+        differences_analysis: differencesAnalysis || undefined,
       });
 
       if (!processedNews) {
         return {};
       }
 
-      // 2. Sources kaydet
+      // 3. Sources kaydet
       const sources = generatedContent.sources_used?.map((source: any) => ({
         processed_news_id: processedNews.id,
         source_name: source.name,
@@ -398,22 +408,23 @@ export class NewsGenerationService {
 
       const savedSources = await NewsModel.createNewsSources(sources);
 
-      // 3. Differences kaydet
-      const differences = generatedContent.differences_found?.map((diff: any) => ({
-        news_id: processedNews.id,
-        title: diff.title,
-        description: diff.description,
-      })) || [];
-
-      const savedDifferences = await NewsModel.createNewsDifferences(differences);
+      // 4. OriginalNews status'unu completed yap
+      await NewsModel.updateOriginalNewsStatus(originalNews.id, 'completed');
 
       return {
         processed_news: processedNews,
         sources: savedSources || [],
-        differences: savedDifferences || [],
       };
     } catch (error) {
       console.error('Error saving generated news:', error);
+      
+      // Hata durumunda OriginalNews status'unu failed yap
+      try {
+        await NewsModel.updateOriginalNewsStatus(originalNews.id, 'failed');
+      } catch (statusError) {
+        console.error('Error updating original news status:', statusError);
+      }
+      
       return {};
     }
   }

@@ -17,11 +17,22 @@ import {
  * News Creation Validation Schema
  */
 export const CreateNewsSchema = z.object({
+  original_news_id: z
+    .string()
+    .uuid('Geçersiz orijinal haber ID\'si')
+    .optional(),
+    
   title: z
     .string()
     .min(NEWS_QUERY_CONSTRAINTS.TITLE_MIN_LENGTH, 'Başlık çok kısa')
     .max(NEWS_QUERY_CONSTRAINTS.TITLE_MAX_LENGTH, 'Başlık çok uzun')
     .trim(),
+  
+  slug: z
+    .string()
+    .min(3, 'Slug çok kısa')
+    .max(NEWS_QUERY_CONSTRAINTS.SLUG_MAX_LENGTH, 'Slug çok uzun')
+    .optional(),
   
   content: z
     .string()
@@ -42,6 +53,17 @@ export const CreateNewsSchema = z.object({
   category_id: z
     .string()
     .uuid('Geçersiz kategori ID\'si')
+    .optional(),
+    
+  confidence_score: z
+    .number()
+    .min(0, 'Güven skoru 0\'dan küçük olamaz')
+    .max(1, 'Güven skoru 1\'den büyük olamaz')
+    .optional(),
+    
+  differences_analysis: z
+    .string()
+    .max(2000, 'Fark analizi çok uzun')
     .optional(),
 });
 

@@ -11,7 +11,6 @@ import {
   ProcessedNews, 
   NewsCategory, 
   NewsSource, 
-  NewsDifference,
   OriginalNews,
   NewsWithRelations,
   CategoryWithStats,
@@ -469,33 +468,6 @@ export class NewsModel {
   }
 
   /**
-   * Create News Differences
-   * 
-   * Haber farklılıkları oluşturur (toplu).
-   * 
-   * @param differences - Farklılık verisi array'i
-   * @returns {Promise<NewsDifference[] | null>}
-   */
-  static async createNewsDifferences(differences: Omit<NewsDifference, 'id' | 'created_at'>[]): Promise<NewsDifference[] | null> {
-    try {
-      const { data, error } = await supabaseAdmin
-        .from('news_differences')
-        .insert(differences)
-        .select();
-
-      if (error) {
-        console.error('Error creating news differences:', error);
-        return null;
-      }
-
-      return data;
-    } catch (error) {
-      console.error('Error in createNewsDifferences:', error);
-      return null;
-    }
-  }
-
-  /**
    * Get Original News by ID
    * 
    * ID'ye göre orijinal haberi getirir.
@@ -690,6 +662,72 @@ export class NewsModel {
     } catch (error) {
       console.error('Error in getFailedNewsForRetry:', error);
       return [];
+    }
+  }
+
+  /**
+   * Update Original News Processing Status
+   * 
+   * Orijinal haberin işleme durumunu günceller.
+   * 
+   * @param id - Original news ID'si
+   * @param status - Yeni status
+   * @param errorMessage - Hata mesajı (opsiyonel)
+   * @returns {Promise<boolean>}
+   */
+  static async updateOriginalNewsStatus(
+    id: string, 
+    status: OriginalNewsProcessingStatus,
+    errorMessage?: string
+  ): Promise<boolean> {
+    try {
+      const updateData: any = {
+        processing_status: status,
+        updated_at: new Date().toISOString(),
+      };
+
+      // Hata mesajı varsa ekle
+      if (errorMessage) {
+        updateData.last_error_message = errorMessage;
+      }
+
+      // Failed durumunda retry count'u artır
+      if (status === 'failed') {
+        const { data: originalNews } = await supabaseAdmin
+          .from('original_news')
+          .select('retry_count, max_retries')
+          .eq('id', id)
+          .single();
+
+        if (originalNews) {
+          const newRetryCount = (originalNews.retry_count || 0) + 1;
+          updateData.retry_count = newRetryCount;
+          
+          // Max retry'a ulaştıysa skipped yap
+          if (newRetryCount >= originalNews.max_retries) {
+            updateData.processing_status = 'skipped';
+          } else {
+            // Next retry time set et (exponential backoff)
+            const delayMinutes = Math.min(60 * Math.pow(2, newRetryCount - 1), 1440); // Max 24 saat
+            updateData.next_retry_at = new Date(Date.now() + delayMinutes * 60 * 1000).toISOString();
+          }
+        }
+      }
+
+      const { error } = await supabaseAdmin
+        .from('original_news')
+        .update(updateData)
+        .eq('id', id);
+
+      if (error) {
+        console.error('Error updating original news status:', error);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error in updateOriginalNewsStatus:', error);
+      return false;
     }
   }
 } 

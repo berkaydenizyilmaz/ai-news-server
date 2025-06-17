@@ -223,18 +223,6 @@ export interface NewsSource {
 }
 
 /**
- * News Difference Interface
- * Haber kaynaklarındaki farklılıkları tanımlar
- */
-export interface NewsDifference {
-  id: string;
-  news_id: string;
-  title: string;
-  description: string;
-  created_at: string;
-}
-
-/**
  * Comment Interface
  * Haber yorumlarını tanımlar
  */
@@ -411,14 +399,12 @@ export interface ProcessedNewsWithDetails extends ProcessedNews {
 }
 
 /**
- * News with Relations Interface
- * İşlenmiş haberi ilişkili verileriyle birlikte tanımlar
+ * News with Relations
  */
 export interface NewsWithRelations extends ProcessedNews {
   category?: NewsCategory;
   original_news?: OriginalNews;
   sources?: NewsSource[];
-  differences?: NewsDifference[];
 }
 
 /**
