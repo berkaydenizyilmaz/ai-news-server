@@ -291,8 +291,8 @@ export const NewsGenerationSchema = z.object({
     .default(5),
   
   research_depth: z
-    .enum(['basic', 'deep'], { errorMap: () => ({ message: 'Geçersiz araştırma derinliği' }) })
-    .default('basic'),
+    .enum(['quick', 'standard', 'deep'], { errorMap: () => ({ message: 'Geçersiz araştırma derinliği' }) })
+    .default('standard'),
   
   force_regenerate: z
     .boolean()

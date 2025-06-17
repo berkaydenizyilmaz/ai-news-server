@@ -14,7 +14,6 @@ import {
   CreateCategoryInput,
   UpdateCategoryInput,
   CategoryQueryInput,
-  NewsGenerationInput,
   BulkNewsOperationInput
 } from './news.validation';
 import { 
@@ -23,6 +22,7 @@ import {
   CategoryListResponse,
   NewsDetailResponse,
   NewsGenerationResult,
+  NewsGenerationRequest,
   NewsProcessingResult,
   BulkNewsOperationResult,
   NewsStatistics
@@ -484,15 +484,15 @@ export class NewsService {
   // ==================== AI NEWS GENERATION ====================
 
   /**
-   * Generate News from RSS Content
+   * Generate News From RSS
    * 
-   * RSS haberinden AI ile kapsamlı haber üretme işlemi.
+   * RSS'den gelen orijinal haberden AI ile yeni haber üretme.
    * 
    * @param generationInput - Haber üretim parametreleri
    * @returns {Promise<NewsServiceResponse<NewsGenerationResult>>}
    */
   static async generateNewsFromRSS(
-    generationInput: NewsGenerationInput
+    generationInput: NewsGenerationRequest
   ): Promise<NewsServiceResponse<NewsGenerationResult>> {
     try {
       // AI ile haber üret
@@ -571,7 +571,7 @@ export class NewsService {
         const generationResult = await NewsGenerationService.generateNews({
           original_news_id: newsId,
           available_categories: availableCategories,
-          research_depth: 'basic',
+          research_depth: 'standard',
         });
 
         results.push({
