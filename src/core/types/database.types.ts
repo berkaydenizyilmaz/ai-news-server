@@ -16,6 +16,13 @@ export type UserRole = 'visitor' | 'user' | 'moderator' | 'admin';
 /**
  * Original News Processing Status Type
  * Orijinal haberlerin AI işleme durumu
+ * 
+ * - pending: Yeni çekildi, AI işleme bekliyor
+ * - processing: AI tarafından işleniyor
+ * - completed: Başarıyla işlendi, processed_news'e kaydedildi
+ * - rejected: AI tarafından reddedildi (kalitesiz, video içerik vb.)
+ * - failed: İşlem hatası, retry gerekli
+ * - skipped: Maksimum retry sayısına ulaşıldı, artık denenmeyecek
  */
 export type OriginalNewsProcessingStatus = 'pending' | 'processing' | 'completed' | 'rejected' | 'failed' | 'skipped';
 
@@ -63,9 +70,9 @@ export type LogLevel = 'info' | 'warning' | 'error' | 'debug';
 
 /**
  * Log Module Type
- * Log modül tipleri
+ * Log modül türleri
  */
-export type LogModule = 'auth' | 'rss' | 'news' | 'settings' | 'forum' | 'users' | 'reports' | 'notification';
+export type LogModule = 'auth' | 'rss' | 'news' | 'settings' | 'forum' | 'users' | 'reports' | 'notification' | 'automation';
 
 /**
  * Setting Value Type

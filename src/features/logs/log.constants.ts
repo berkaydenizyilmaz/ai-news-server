@@ -81,7 +81,8 @@ export const LOG_MODULES = [
   'forum', 
   'users', 
   'reports', 
-  'notification'
+  'notification',
+  'automation'
 ] as const;
 
 // ==================== ERROR MESSAGES ====================

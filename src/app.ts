@@ -18,6 +18,7 @@ import { rssRoutes } from '@/features/rss';
 import { logRoutes } from '@/features/logs';
 import { usersRoutes } from '@/features/users';
 import { newsRoutes } from '@/features/news';
+import { automationRoutes } from '@/features/automation';
 
 const app = express();
 
@@ -84,6 +85,9 @@ app.use('/api/rss', rssRoutes);
 
 // News routes
 app.use('/api/news', newsRoutes);
+
+// Automation routes
+app.use('/api/automation', automationRoutes);
 
 // Log routes
 app.use('/api/logs', logRoutes);

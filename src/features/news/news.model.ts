@@ -13,7 +13,8 @@ import {
   NewsDifference,
   OriginalNews,
   NewsWithRelations,
-  CategoryWithStats
+  CategoryWithStats,
+  OriginalNewsProcessingStatus
 } from '@/core/types/database.types';
 import { 
   CreateNewsInput, 
@@ -572,6 +573,119 @@ export class NewsModel {
     } catch (error) {
       console.error('Error checking category slug exists:', error);
       return false;
+    }
+  }
+
+  /**
+   * Get Pending News for Processing
+   * 
+   * AI işleme bekleyen haberleri getirir.
+   * 
+   * @param limit - Maksimum kayıt sayısı
+   * @returns {Promise<OriginalNews[]>}
+   */
+  static async getPendingNewsForProcessing(limit: number = 10): Promise<OriginalNews[]> {
+    try {
+      const { data, error } = await supabaseAdmin
+        .from('original_news')
+        .select('*')
+        .eq('processing_status', 'pending')
+        .order('created_at', { ascending: true })
+        .limit(limit);
+
+      if (error) {
+        console.error('Error fetching pending news:', error);
+        return [];
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('Error in getPendingNewsForProcessing:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Update News Processing Status
+   * 
+   * Haberin işleme durumunu günceller.
+   * 
+   * @param id - Haber ID'si
+   * @param status - Yeni durum
+   * @param errorMessage - Hata mesajı (opsiyonel)
+   * @returns {Promise<boolean>}
+   */
+  static async updateNewsProcessingStatus(
+    id: string, 
+    status: OriginalNewsProcessingStatus,
+    errorMessage?: string
+  ): Promise<boolean> {
+    try {
+      const updateData: any = {
+        processing_status: status,
+        updated_at: new Date().toISOString(),
+      };
+
+      if (status === 'failed' && errorMessage) {
+        updateData.last_error_message = errorMessage;
+        updateData.retry_count = supabaseAdmin.rpc('increment', { x: 1 });
+        
+        // Next retry time hesapla (exponential backoff)
+        const retryDelay = Math.min(120000 * Math.pow(2, updateData.retry_count), 600000);
+        updateData.next_retry_at = new Date(Date.now() + retryDelay).toISOString();
+      }
+
+      if (status === 'processing') {
+        // Processing başladığında retry bilgilerini temizle
+        updateData.last_error_message = null;
+        updateData.next_retry_at = null;
+      }
+
+      const { error } = await supabaseAdmin
+        .from('original_news')
+        .update(updateData)
+        .eq('id', id);
+
+      if (error) {
+        console.error('Error updating news processing status:', error);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error in updateNewsProcessingStatus:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Get Failed News for Retry
+   * 
+   * Retry edilecek başarısız haberleri getirir.
+   * 
+   * @param limit - Maksimum kayıt sayısı
+   * @returns {Promise<OriginalNews[]>}
+   */
+  static async getFailedNewsForRetry(limit: number = 5): Promise<OriginalNews[]> {
+    try {
+      const { data, error } = await supabaseAdmin
+        .from('original_news')
+        .select('*')
+        .eq('processing_status', 'failed')
+        .lt('retry_count', 3)
+        .lte('next_retry_at', new Date().toISOString())
+        .order('next_retry_at', { ascending: true })
+        .limit(limit);
+
+      if (error) {
+        console.error('Error fetching failed news for retry:', error);
+        return [];
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('Error in getFailedNewsForRetry:', error);
+      return [];
     }
   }
 } 
