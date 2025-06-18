@@ -56,9 +56,9 @@ export class NewsGenerationService {
         };
       }
 
-      // 2. LangGraph research request hazırla
+      // 2. LangGraph research request hazırla - Sadece başlık ve link gönder
       const researchRequest: LangGraphResearchRequest = {
-        query: `${originalNews.title}\n\n${originalNews.content || ''}`,
+        query: `Haber Başlığı: ${originalNews.title}\nKaynak Link: ${originalNews.original_url}`,
         max_results: generationInput.max_sources || NEWS_GENERATION_CONFIG.MAX_SOURCES,
         research_depth: generationInput.research_depth || 'standard',
       };

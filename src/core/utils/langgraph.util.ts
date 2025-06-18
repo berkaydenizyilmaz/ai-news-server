@@ -403,7 +403,7 @@ ARAŞTIRMA DERİNLİĞİ: ${depth}
   "content": "Tam haber metni - hiçbir kaynak referansı olmadan sadece düz metin",
   "summary": "Kısa özet",
   "category_slug": "kategori-slug",
-  "confidence_score": 0.9,
+  "confidence_score": 0.5,
   "source_conflicts": "",
   "sources": [
     {
