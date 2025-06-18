@@ -426,6 +426,8 @@ MUTLAKA UYULACAK KURALLAR:
 8. Özel karakterleri escape et: \" \n \\
 9. Content'te satır geçişleri için \\n kullan
 10. Türkçe karakter sorun yaratmasın
+11. Content içinde [kaynak](link) formatı KULLANMA - sadece düz metin yaz
+12. Kaynak bilgilerini sadece sources array'inde ver
 
 EĞER HABER UYGUN DEĞİLSE:
 {

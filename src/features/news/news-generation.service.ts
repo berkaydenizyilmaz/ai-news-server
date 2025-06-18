@@ -271,11 +271,29 @@ export class NewsGenerationService {
       
       // Temel alanları regex ile çıkar
       const titleMatch = answerText.match(/"title"\s*:\s*"([^"]+)"/);
-      const contentMatch = answerText.match(/"content"\s*:\s*"([\s\S]*?)"\s*,\s*"summary"/);
       const summaryMatch = answerText.match(/"summary"\s*:\s*"([^"]+)"/);
       const categoryMatch = answerText.match(/"category_slug"\s*:\s*"([^"]+)"/);
       const suitableMatch = answerText.match(/"is_suitable"\s*:\s*(true|false)/);
       const confidenceMatch = answerText.match(/"confidence_score"\s*:\s*([0-9.]+)/);
+      
+      // Content için daha güçlü regex - farklı field sıralarını destekle
+      let contentMatch = answerText.match(/"content"\s*:\s*"([\s\S]*?)"\s*,\s*"summary"/);
+      if (!contentMatch) {
+        contentMatch = answerText.match(/"content"\s*:\s*"([\s\S]*?)"\s*,\s*"category_slug"/);
+      }
+      if (!contentMatch) {
+        contentMatch = answerText.match(/"content"\s*:\s*"([\s\S]*?)"\s*,\s*"confidence_score"/);
+      }
+      if (!contentMatch) {
+        contentMatch = answerText.match(/"content"\s*:\s*"([\s\S]*?)"\s*,\s*"source_conflicts"/);
+      }
+      if (!contentMatch) {
+        contentMatch = answerText.match(/"content"\s*:\s*"([\s\S]*?)"\s*,\s*"sources"/);
+      }
+      if (!contentMatch) {
+        // Son çare: content'in başından bir sonraki field'a kadar
+        contentMatch = answerText.match(/"content"\s*:\s*"([\s\S]*?)"\s*,\s*"/);
+      }
       
       // Uygunluk kontrolü
       if (suitableMatch && suitableMatch[1] === 'false') {
@@ -288,6 +306,8 @@ export class NewsGenerationService {
       
       if (!titleMatch || !contentMatch) {
         console.error('❌ Fallback parsing başarısız - temel alanlar bulunamadı');
+        console.log('Title bulundu:', !!titleMatch);
+        console.log('Content bulundu:', !!contentMatch);
         return null;
       }
       
