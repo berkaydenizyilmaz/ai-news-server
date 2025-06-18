@@ -200,7 +200,6 @@ export class LangGraphService {
             configurable: {
               query_generator_model: 'gemini-2.0-flash',
               reflection_model: 'gemini-2.5-flash-preview-04-17',
-              reasoning_model: 'gemini-2.5-flash-preview-04-17',
               answer_model: 'gemini-2.5-pro-preview-05-06',
               number_of_initial_queries: 3,
               max_research_loops: 2
