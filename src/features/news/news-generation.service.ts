@@ -196,14 +196,64 @@ export class NewsGenerationService {
         
         // Fallback: Regex ile temel alanları çıkarmaya çalış
         try {
+          console.log('🔍 Fallback parsing başlatılıyor...');
+          
+          // Daha güçlü regex pattern'ler - content'in kesilmemesi için
           const titleMatch = answerText.match(/"title"\s*:\s*"([^"]+)"/);
-          const contentMatch = answerText.match(/"content"\s*:\s*"([\s\S]*?)"/);
-          const suitableMatch = answerText.match(/"is_suitable"\s*:\s*(true|false)/);
+          const summaryMatch = answerText.match(/"summary"\s*:\s*"([^"]+)"/);
           const categoryMatch = answerText.match(/"category_slug"\s*:\s*"([^"]+)"/);
+          const suitableMatch = answerText.match(/"is_suitable"\s*:\s*(true|false)/);
+          const confidenceMatch = answerText.match(/"confidence_score"\s*:\s*([0-9.]+)/);
+          const sourceConflictsMatch = answerText.match(/"source_conflicts"\s*:\s*"([^"]*)"/);
+          
+          // Content için daha güçlü pattern - son tırnağa kadar al
+          let contentMatch = answerText.match(/"content"\s*:\s*"([\s\S]*?)"\s*,\s*"summary"/);
+          if (!contentMatch) {
+            // Summary yoksa, sources'a kadar al
+            contentMatch = answerText.match(/"content"\s*:\s*"([\s\S]*?)"\s*,\s*"sources"/);
+          }
+          if (!contentMatch) {
+            // Sources da yoksa, category_slug'a kadar al
+            contentMatch = answerText.match(/"content"\s*:\s*"([\s\S]*?)"\s*,\s*"category_slug"/);
+          }
+          if (!contentMatch) {
+            // Son çare: confidence_score'a kadar al
+            contentMatch = answerText.match(/"content"\s*:\s*"([\s\S]*?)"\s*,\s*"confidence_score"/);
+          }
+          if (!contentMatch) {
+            // En son çare: content'in başından en son tırnağa kadar
+            contentMatch = answerText.match(/"content"\s*:\s*"([\s\S]*?)"\s*[,}]/);
+          }
+          
+          // Sources array'ini parse et
+          let sources = [];
+          const sourcesMatch = answerText.match(/"sources"\s*:\s*\[([\s\S]*?)\]/);
+          if (sourcesMatch) {
+            try {
+              // Sources array'indeki her bir source'u ayrı ayrı parse et
+              const sourcesText = sourcesMatch[1];
+              const sourcePattern = /\{\s*"title"\s*:\s*"([^"]+)"\s*,\s*"url"\s*:\s*"([^"]+)"\s*,\s*"snippet"\s*:\s*"([^"]+)"\s*(?:,\s*"reliability_score"\s*:\s*([0-9.]+))?\s*\}/g;
+              let sourceMatch;
+              while ((sourceMatch = sourcePattern.exec(sourcesText)) !== null) {
+                sources.push({
+                  title: sourceMatch[1],
+                  url: sourceMatch[2],
+                  snippet: sourceMatch[3],
+                  reliability_score: sourceMatch[4] ? parseFloat(sourceMatch[4]) : 0.8
+                });
+              }
+            } catch (sourcesError) {
+              console.log('⚠️ Sources parsing hatası, boş array kullanılıyor');
+              sources = [];
+            }
+          }
           
           console.log('🔍 Fallback parsing sonuçları:');
           console.log('- Title:', titleMatch ? titleMatch[1].substring(0, 50) + '...' : 'BULUNAMADI');
+          console.log('- Content length:', contentMatch ? contentMatch[1].length : 0);
+          console.log('- Summary:', summaryMatch ? summaryMatch[1].substring(0, 50) + '...' : 'BULUNAMADI');
           console.log('- Category slug:', categoryMatch ? categoryMatch[1] : 'BULUNAMADI');
+          console.log('- Sources count:', sources.length);
           console.log('- Is suitable:', suitableMatch ? suitableMatch[1] : 'BULUNAMADI');
           
           if (suitableMatch && suitableMatch[1] === 'false') {
@@ -227,17 +277,25 @@ export class NewsGenerationService {
               console.log(`✅ Fallback - Kategori eşleştirme sonucu:`, categoryMatchResult ? `${categoryMatchResult.name} (${categoryMatchResult.slug})` : 'BULUNAMADI');
             }
             
+            // Slug oluştur (title'dan)
+            const slug = titleMatch[1]
+              .toLowerCase()
+              .replace(/[^a-z0-9\s-]/g, '')
+              .replace(/\s+/g, '-')
+              .substring(0, 100);
+            
             return {
               title: titleMatch[1],
+              slug: slug,
               content: contentMatch[1],
-              summary: '',
+              summary: summaryMatch ? summaryMatch[1] : titleMatch[1].substring(0, 200) + '...', // Title'dan summary oluştur
               category_slug: categorySlug,
               category_id: categoryMatchResult?.id,
               category_match: categoryMatchResult,
-              confidence_score: 0.5,
-              sources: [],
+              confidence_score: confidenceMatch ? parseFloat(confidenceMatch[1]) : 0.5,
+              sources_used: sources,
               is_suitable: true,
-              source_conflicts: '',
+              source_conflicts: sourceConflictsMatch ? sourceConflictsMatch[1] : '',
             };
           }
         } catch (fallbackError) {
