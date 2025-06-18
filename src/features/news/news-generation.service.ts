@@ -184,7 +184,10 @@ export class NewsGenerationService {
           .replace(/\\t/g, '\\t') // Tab'ları JSON uyumlu hale getir
           .replace(/\\r/g, '\\r'); // Carriage return'leri JSON uyumlu hale getir
         
-        // 5. JSON parse et
+        // 5. Ek JSON düzeltmeleri - daha agresif düzeltme
+        cleanJson = this.fixCommonJsonSyntaxErrors(cleanJson);
+        
+        // 6. JSON parse et
         parsedResponse = JSON.parse(cleanJson);
         
       } catch (parseError) {
@@ -300,6 +303,45 @@ export class NewsGenerationService {
     } catch (error) {
       console.error('Error parsing LangGraph JSON response:', error);
       return null;
+    }
+  }
+
+  /**
+   * JSON syntax hatalarını düzeltmeye çalışır
+   */
+  private static fixCommonJsonSyntaxErrors(jsonString: string): string {
+    let fixed = jsonString;
+    
+    try {
+      // 1. Trailing comma'ları temizle (daha kapsamlı)
+      fixed = fixed.replace(/,(\s*[}\]])/g, '$1');
+      
+      // 2. Eksik virgülleri array elemanları arasına ekle
+      fixed = fixed.replace(/}(\s*){/g, '},$1{');
+      fixed = fixed.replace(/](\s*)\[/g, '],$1[');
+      
+      // 3. String değerlerde eksik tırnak sorunlarını düzelt
+      // Property name'lerde eksik tırnak
+      fixed = fixed.replace(/([{,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:/g, '$1"$2":');
+      
+      // 4. Array içinde eksik virgüller
+      fixed = fixed.replace(/}(\s*){/g, '},$1{');
+      fixed = fixed.replace(/](\s*)\[/g, '],$1[');
+      
+      // 5. Son property'den sonra virgül varsa temizle
+      fixed = fixed.replace(/,(\s*})$/g, '$1');
+      
+      // 6. Çift virgülleri tek virgüle çevir
+      fixed = fixed.replace(/,,+/g, ',');
+      
+      // 7. Boş string'leri düzelt
+      fixed = fixed.replace(/:\s*,/g, ':"",');
+      fixed = fixed.replace(/:\s*}/g, ':""}');
+      
+      return fixed;
+    } catch (error) {
+      console.error('Error in fixCommonJsonSyntaxErrors:', error);
+      return jsonString; // Hata varsa orijinali döndür
     }
   }
 
