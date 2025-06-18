@@ -18,7 +18,6 @@ export const langGraphResearchSchema = z.object({
   query: z.string().min(10, 'Araştırma sorgusu en az 10 karakter olmalıdır').max(2000, 'Araştırma sorgusu çok uzun'),
   max_results: z.number().int().min(1).max(20).optional().default(5),
   research_depth: z.enum(['quick', 'standard', 'deep']).optional().default('standard'),
-  language: z.enum(['tr', 'en']).optional().default('tr'),
 });
 
 // ==================== TYPE DEFINITIONS ====================
@@ -27,7 +26,6 @@ export interface LangGraphResearchRequest {
   query: string;
   max_results?: number;
   research_depth?: 'quick' | 'standard' | 'deep';
-  language?: 'tr' | 'en';
 }
 
 export interface LangGraphResearchResponse {
@@ -264,29 +262,45 @@ export class LangGraphService {
       const startTime = Date.now();
 
       response.data.on('data', (chunk: Buffer) => {
-        const lines = chunk.toString().split('\n');
+        const chunkStr = chunk.toString();
+        console.log('📦 LangGraph stream chunk:', chunkStr.substring(0, 200) + '...');
+        
+        const lines = chunkStr.split('\n');
         
         for (const line of lines) {
           if (line.startsWith('data: ')) {
             try {
-              const data = JSON.parse(line.slice(6));
+              const jsonStr = line.slice(6).trim();
+              if (jsonStr === '[DONE]') {
+                console.log('🏁 LangGraph stream finished');
+                continue;
+              }
               
-              // Final answer'ı yakala
+              const data = JSON.parse(jsonStr);
+              console.log('📋 LangGraph stream data:', JSON.stringify(data, null, 2));
+              
+              // Final answer'ı yakala - farklı formatları dene
               if (data.type === 'final' && data.content) {
                 finalAnswer = data.content;
+                console.log('✅ Final answer yakalandı:', finalAnswer.substring(0, 100) + '...');
+              } else if (data.content && typeof data.content === 'string') {
+                finalAnswer += data.content;
+                console.log('📝 Content eklendi:', data.content.substring(0, 50) + '...');
               }
               
               // Sources'ları yakala
               if (data.sources && Array.isArray(data.sources)) {
                 sources = data.sources;
+                console.log('📚 Sources yakalandı:', sources.length, 'adet');
               }
               
               // Confidence score'u yakala
               if (data.confidence_score) {
                 confidence = data.confidence_score;
+                console.log('🎯 Confidence yakalandı:', confidence);
               }
             } catch (parseError) {
-              // JSON parse hatası, devam et
+              console.log('⚠️ JSON parse hatası:', line);
               continue;
             }
           }
@@ -335,15 +349,13 @@ export class LangGraphService {
     request: LangGraphResearchRequest, 
     availableCategories?: Array<{id: string, name: string, slug: string}>
   ): string {
-    const language = request.language || 'tr';
     const depth = request.research_depth || 'standard';
     
     const categoriesText = availableCategories 
       ? availableCategories.map(cat => `- ${cat.name} (${cat.slug})`).join('\n')
       : '';
     
-    if (language === 'tr') {
-      return `
+    return `
 Bu Türkçe haber konusu için kapsamlı araştırma yap ve yeni bir haber makalesi oluştur:
 
 ARAŞTIRMA KONUSU:
@@ -394,58 +406,6 @@ ARAŞTIRMA DERİNLİĞİ: ${depth}
 - Confidence score 0.0-1.0 arası olmalı
 - Eğer kategori uygun değilse confidence'ı 0.3'ün altında tut
 `;
-    } else {
-      return `
-Conduct comprehensive research on this news topic and create a detailed news article:
-
-RESEARCH TOPIC:
-${request.query}
-
-${availableCategories ? `AVAILABLE CATEGORIES:
-${categoriesText}
-
-Determine which category this news belongs to. If it doesn't fit any category, write "NONE".` : ''}
-
-TASKS:
-1. Research current developments on this topic
-2. Gather reliable information from different sources (minimum ${request.max_results || 5} sources)
-3. Evaluate multiple perspectives
-4. Write a comprehensive, objective news article
-5. Compare with original news
-
-RESEARCH DEPTH: ${depth}
-
-OUTPUT FORMAT (JSON):
-{
-  "title": "New, original headline (max 150 chars)",
-  "content": "Comprehensive news content (minimum 500 words)",
-  "summary": "Brief summary (2-3 sentences, max 200 chars)",
-  "category_slug": "appropriate-category-slug or NONE",
-  "confidence_score": 0.8,
-  "sources": [
-    {
-      "title": "Source title",
-      "url": "https://source-url.com",
-      "snippet": "Brief quote",
-      "reliability_score": 0.9
-    }
-  ],
-  "differences": [
-    {
-      "title": "Main difference title",
-      "description": "Explain difference from original news"
-    }
-  ]
-}
-
-IMPORTANT RULES:
-- Respond only in JSON format, no additional text
-- Focus on current, verifiable sources
-- Add different angles and details from original news
-- Confidence score must be between 0.0-1.0
-- If category doesn't fit, keep confidence below 0.3
-`;
-    }
   }
 
   /**
