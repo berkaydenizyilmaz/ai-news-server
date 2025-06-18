@@ -402,14 +402,14 @@ EĞER UYGUNSA GÖREVLER:
 
 ARAŞTIRMA DERİNLİĞİ: ${depth}
 
-ÇIKTI FORMATI (JSON):
+ÇIKTI FORMATI (MUTLAKA GEÇERLİ JSON):
 {
-  "is_suitable": true/false,
-  "rejection_reason": "Eğer is_suitable=false ise açıklama",
+  "is_suitable": true,
+  "rejection_reason": null,
   "title": "Yeni, özgün başlık (maksimum 150 karakter)",
   "content": "Kapsamlı haber metni",
   "summary": "Kısa özet (2-3 cümle, maksimum 200 karakter)",
-  "category_slug": "uygun-kategori-slug veya NONE",
+  "category_slug": "uygun-kategori-slug",
   "confidence_score": 0.8,
   "sources": [
     {
@@ -419,11 +419,20 @@ ARAŞTIRMA DERİNLİĞİ: ${depth}
       "reliability_score": 0.9
     }
   ],
-  "source_conflicts": "Eğer kaynaklar arasında önemli çelişkiler varsa buraya yaz, yoksa boş bırak"
+  "source_conflicts": ""
 }
 
-ÖNEMLI KURALLAR:
-- Sadece JSON formatında yanıt ver, başka metin ekleme
+KRİTİK JSON KURALLARI:
+- SADECE GEÇERLİ JSON formatında yanıt ver, başka hiçbir metin ekleme
+- Tüm string değerleri çift tırnak içinde yaz
+- Array ve object'lerde son elemandan sonra virgül KOYMA
+- Nested JSON'larda tüm parantezleri doğru kapat
+- Özel karakterleri escape et (\\n, \\", \\\\)
+- Boolean değerler: true/false (tırnak içinde değil)
+- Null değerler: null (tırnak içinde değil)
+- Sayısal değerler: 0.8 (tırnak içinde değil)
+
+İÇERİK KURALLARI:
 - Türkçe içerik oluştur
 - ÖNCE is_suitable değerlendirmesi yap
 - Eğer uygun değilse is_suitable=false ve rejection_reason ver
@@ -431,6 +440,14 @@ ARAŞTIRMA DERİNLİĞİ: ${depth}
 - İçerikte köşeli parantez [] içinde kaynak referansları KULLANMA
 - Sadece en güvenilir ${request.max_results || 5} kaynağı seç ve kullan
 - Haber metninde kaynak linklerini gömme
+
+JSON SYNTAX KONTROL:
+- Her açılan { için kapanan } olmalı
+- Her açılan [ için kapanan ] olmalı
+- Property'ler arasında virgül olmalı
+- Son property'den sonra virgül OLMAMALI
+- String'lerde tırnak karakteri varsa \\" şeklinde escape et
+- Uzun metinlerde satır sonları \\n olarak escape et
 `;
   }
 
