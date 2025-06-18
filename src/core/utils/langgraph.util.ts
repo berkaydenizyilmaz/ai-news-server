@@ -425,6 +425,9 @@ ARAŞTIRMA DERİNLİĞİ: ${depth}
 - Orijinal haberden farklı açılar ve detaylar ekle
 - Confidence score 0.0-1.0 arası olmalı
 - Eğer kategori uygun değilse confidence'ı 0.3'ün altında tut
+- İçerikte köşeli parantez [] içinde kaynak referansları KULLANMA
+- Sadece en güvenilir 5 kaynağı seç ve kullan
+- Haber metninde kaynak linklerini gömme
 `;
   }
 
@@ -443,4 +446,4 @@ ARAŞTIRMA DERİNLİĞİ: ${depth}
     
     return response.status === 200;
   }
-} 
+}
