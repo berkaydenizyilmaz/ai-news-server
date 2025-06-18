@@ -78,7 +78,6 @@ export class NewsGenerationService {
         query: `${originalNews.title}\n\n${originalNews.content || ''}`,
         max_results: generationInput.max_sources || NEWS_GENERATION_CONFIG.MAX_SOURCES,
         research_depth: generationInput.research_depth || 'standard',
-        language: 'tr',
       };
 
       // 4. LangGraph ile araştırma yap
