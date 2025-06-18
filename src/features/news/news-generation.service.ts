@@ -175,8 +175,14 @@ export class NewsGenerationService {
         // 3. Trailing comma'ları temizle
         cleanJson = cleanJson.replace(/,(\s*[}\]])/g, '$1');
         
-        // 4. Kaçış karakterlerini düzelt
-        cleanJson = cleanJson.replace(/\\"/g, '"').replace(/\\n/g, '\n');
+        // 4. Control karakterleri ve kaçış karakterlerini düzelt
+        cleanJson = cleanJson
+          .replace(/[\x00-\x1F\x7F]/g, '') // Control karakterleri temizle
+          .replace(/\\\\/g, '\\') // Çift backslash'ları tek yap
+          .replace(/\\"/g, '"') // Escaped quotes'ları düzelt
+          .replace(/\\n/g, '\\n') // Newline'ları JSON uyumlu hale getir
+          .replace(/\\t/g, '\\t') // Tab'ları JSON uyumlu hale getir
+          .replace(/\\r/g, '\\r'); // Carriage return'leri JSON uyumlu hale getir
         
         // 5. JSON parse et
         parsedResponse = JSON.parse(cleanJson);
@@ -190,6 +196,7 @@ export class NewsGenerationService {
           const titleMatch = answerText.match(/"title"\s*:\s*"([^"]+)"/);
           const contentMatch = answerText.match(/"content"\s*:\s*"([\s\S]*?)"/);
           const suitableMatch = answerText.match(/"is_suitable"\s*:\s*(true|false)/);
+          const categoryMatch = answerText.match(/"category_slug"\s*:\s*"([^"]+)"/);
           
           if (suitableMatch && suitableMatch[1] === 'false') {
             const reasonMatch = answerText.match(/"rejection_reason"\s*:\s*"([^"]+)"/);
@@ -201,11 +208,12 @@ export class NewsGenerationService {
           
           if (titleMatch && contentMatch) {
             console.log('⚠️ Fallback parsing kullanıldı');
+            const categorySlug = categoryMatch ? categoryMatch[1] : 'NONE';
             return {
               title: titleMatch[1],
               content: contentMatch[1],
               summary: '',
-              category_slug: 'NONE',
+              category_slug: categorySlug,
               confidence_score: 0.5,
               sources: [],
               is_suitable: true,
@@ -237,7 +245,12 @@ export class NewsGenerationService {
       // Kategori eşleştirme
       let categoryMatch = null;
       if (parsedResponse.category_slug && parsedResponse.category_slug !== 'NONE') {
+        console.log(`🔍 AI tarafından belirtilen kategori: "${parsedResponse.category_slug}"`);
+        console.log(`📋 Mevcut kategoriler:`, availableCategories.map(cat => `${cat.name} (${cat.slug})`));
         categoryMatch = availableCategories.find(cat => cat.slug === parsedResponse.category_slug);
+        console.log(`✅ Kategori eşleştirme sonucu:`, categoryMatch ? `${categoryMatch.name} (${categoryMatch.slug})` : 'BULUNAMADI');
+      } else {
+        console.log(`❌ AI kategori belirtmedi veya NONE döndürdü: "${parsedResponse.category_slug}"`);
       }
 
       // Slug oluştur (title'dan)

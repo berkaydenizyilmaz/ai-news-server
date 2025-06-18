@@ -116,7 +116,7 @@ export class SchedulerService extends EventEmitter {
       const categoriesResult = await NewsService.getNewsCategories({
         page: 1,
         limit: 100,
-        is_active: true,
+        // is_active: true, // Tüm kategorileri al, sadece aktif olanları değil
         sort_by: 'name',
         sort_order: 'asc',
       });
