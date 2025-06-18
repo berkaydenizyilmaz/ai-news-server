@@ -553,21 +553,7 @@ export class NewsService {
           continue;
         }
 
-        // Validasyon
-        const validation = await NewsGenerationService.validateNewsContent(
-          originalNews,
-          availableCategories
-        );
-
-        if (!validation.is_valid || !validation.is_suitable) {
-          results.push({
-            original_news: originalNews,
-            validation,
-          });
-          continue;
-        }
-
-        // Haber üret
+        // Direkt haber üret - AI artık validasyonu yapıyor
         const generationResult = await NewsGenerationService.generateNews({
           original_news_id: newsId,
           available_categories: availableCategories,
@@ -576,7 +562,13 @@ export class NewsService {
 
         results.push({
           original_news: originalNews,
-          validation,
+          validation: {
+            is_valid: generationResult.status === 'success',
+            is_suitable: generationResult.status === 'success',
+            rejection_reasons: generationResult.status === 'rejected' ? [generationResult.rejection_reason || 'Unknown error'] : [],
+            quality_score: generationResult.confidence_score || 0,
+            content_analysis: {} as any,
+          },
           generation: generationResult,
         });
       }

@@ -38,7 +38,7 @@ export const RETRY_CONFIG = {
   RSS_MAX_DELAY: 300000, // 5 dakika max
   
   // AI Processing Retry Settings
-  AI_MAX_RETRIES: 3,
+  AI_MAX_RETRIES: 1,
   AI_RETRY_DELAY: 120000, // 2 dakika
   AI_LINEAR_BACKOFF: true,
   AI_MAX_DELAY: 600000, // 10 dakika max
