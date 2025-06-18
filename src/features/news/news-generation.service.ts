@@ -159,185 +159,86 @@ export class NewsGenerationService {
   ): Promise<any> {
     try {
       const answerText = response.answer || '';
+      console.log('🔍 AI Response parsing başlatılıyor...');
       
-      // JSON parse et - daha güçlü parsing
       let parsedResponse: any;
+      
       try {
-        // 1. JSON'u temizle (markdown kod blokları varsa)
-        let cleanJson = answerText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+        // 1. JSON'u temizle ve parse et
+        let cleanJson = answerText.trim();
         
-        // 2. Çoklu JSON objesi varsa ilkini al
-        const jsonMatch = cleanJson.match(/\{[\s\S]*?\}/);
-        if (jsonMatch) {
-          cleanJson = jsonMatch[0];
+        // Markdown kod blokları varsa temizle
+        cleanJson = cleanJson.replace(/```json\s*/g, '').replace(/```\s*/g, '');
+        
+        // İlk { ile son } arasındaki kısmı al
+        const startIndex = cleanJson.indexOf('{');
+        const lastIndex = cleanJson.lastIndexOf('}');
+        
+        if (startIndex === -1 || lastIndex === -1) {
+          throw new Error('JSON başlangıç veya bitiş bulunamadı');
         }
         
-        // 3. Trailing comma'ları temizle
-        cleanJson = cleanJson.replace(/,(\s*[}\]])/g, '$1');
+        cleanJson = cleanJson.substring(startIndex, lastIndex + 1);
         
-        // 4. Control karakterleri ve kaçış karakterlerini düzelt
-        cleanJson = cleanJson
-          .replace(/[\x00-\x1F\x7F]/g, '') // Control karakterleri temizle
-          .replace(/\\\\/g, '\\') // Çift backslash'ları tek yap
-          .replace(/\\"/g, '"') // Escaped quotes'ları düzelt
-          .replace(/\\n/g, '\\n') // Newline'ları JSON uyumlu hale getir
-          .replace(/\\t/g, '\\t') // Tab'ları JSON uyumlu hale getir
-          .replace(/\\r/g, '\\r'); // Carriage return'leri JSON uyumlu hale getir
-        
-        // 5. Ek JSON düzeltmeleri - daha agresif düzeltme
-        cleanJson = this.fixCommonJsonSyntaxErrors(cleanJson);
-        
-        // 6. JSON parse et
+        // JSON parse et
         parsedResponse = JSON.parse(cleanJson);
+        console.log('✅ JSON başarıyla parse edildi');
         
       } catch (parseError) {
-        console.error('Failed to parse LangGraph JSON response:', parseError);
-        console.error('Raw response (full):', answerText); // Tam response'u göster
+        console.error('❌ JSON parsing hatası:', parseError);
+        console.error('Raw response:', answerText.substring(0, 500) + '...');
         
-        // Fallback: Regex ile temel alanları çıkarmaya çalış
-        try {
-          console.log('🔍 Fallback parsing başlatılıyor...');
-          
-          // Daha güçlü regex pattern'ler - content'in kesilmemesi için
-          const titleMatch = answerText.match(/"title"\s*:\s*"([^"]+)"/);
-          const summaryMatch = answerText.match(/"summary"\s*:\s*"([^"]+)"/);
-          const categoryMatch = answerText.match(/"category_slug"\s*:\s*"([^"]+)"/);
-          const suitableMatch = answerText.match(/"is_suitable"\s*:\s*(true|false)/);
-          const confidenceMatch = answerText.match(/"confidence_score"\s*:\s*([0-9.]+)/);
-          const sourceConflictsMatch = answerText.match(/"source_conflicts"\s*:\s*"([^"]*)"/);
-          
-          // Content için daha güçlü pattern - son tırnağa kadar al
-          let contentMatch = answerText.match(/"content"\s*:\s*"([\s\S]*?)"\s*,\s*"summary"/);
-          if (!contentMatch) {
-            // Summary yoksa, sources'a kadar al
-            contentMatch = answerText.match(/"content"\s*:\s*"([\s\S]*?)"\s*,\s*"sources"/);
-          }
-          if (!contentMatch) {
-            // Sources da yoksa, category_slug'a kadar al
-            contentMatch = answerText.match(/"content"\s*:\s*"([\s\S]*?)"\s*,\s*"category_slug"/);
-          }
-          if (!contentMatch) {
-            // Son çare: confidence_score'a kadar al
-            contentMatch = answerText.match(/"content"\s*:\s*"([\s\S]*?)"\s*,\s*"confidence_score"/);
-          }
-          if (!contentMatch) {
-            // En son çare: content'in başından en son tırnağa kadar
-            contentMatch = answerText.match(/"content"\s*:\s*"([\s\S]*?)"\s*[,}]/);
-          }
-          
-          // Sources array'ini parse et
-          let sources = [];
-          const sourcesMatch = answerText.match(/"sources"\s*:\s*\[([\s\S]*?)\]/);
-          if (sourcesMatch) {
-            try {
-              // Sources array'indeki her bir source'u ayrı ayrı parse et
-              const sourcesText = sourcesMatch[1];
-              const sourcePattern = /\{\s*"title"\s*:\s*"([^"]+)"\s*,\s*"url"\s*:\s*"([^"]+)"\s*,\s*"snippet"\s*:\s*"([^"]+)"\s*(?:,\s*"reliability_score"\s*:\s*([0-9.]+))?\s*\}/g;
-              let sourceMatch;
-              while ((sourceMatch = sourcePattern.exec(sourcesText)) !== null) {
-                sources.push({
-                  title: sourceMatch[1],
-                  url: sourceMatch[2],
-                  snippet: sourceMatch[3],
-                  reliability_score: sourceMatch[4] ? parseFloat(sourceMatch[4]) : 0.8
-                });
-              }
-            } catch (sourcesError) {
-              console.log('⚠️ Sources parsing hatası, boş array kullanılıyor');
-              sources = [];
-            }
-          }
-          
-          console.log('🔍 Fallback parsing sonuçları:');
-          console.log('- Title:', titleMatch ? titleMatch[1].substring(0, 50) + '...' : 'BULUNAMADI');
-          console.log('- Content length:', contentMatch ? contentMatch[1].length : 0);
-          console.log('- Summary:', summaryMatch ? summaryMatch[1].substring(0, 50) + '...' : 'BULUNAMADI');
-          console.log('- Category slug:', categoryMatch ? categoryMatch[1] : 'BULUNAMADI');
-          console.log('- Sources count:', sources.length);
-          console.log('- Is suitable:', suitableMatch ? suitableMatch[1] : 'BULUNAMADI');
-          
-          if (suitableMatch && suitableMatch[1] === 'false') {
-            const reasonMatch = answerText.match(/"rejection_reason"\s*:\s*"([^"]+)"/);
-            return {
-              is_suitable: false,
-              rejection_reason: reasonMatch ? reasonMatch[1] : 'Content deemed unsuitable by AI',
-            };
-          }
-          
-          if (titleMatch && contentMatch) {
-            console.log('⚠️ Fallback parsing kullanıldı');
-            const categorySlug = categoryMatch ? categoryMatch[1] : 'NONE';
-            
-            // Fallback parsing'de de kategori eşleştirme yap
-            let categoryMatchResult = null;
-            if (categorySlug && categorySlug !== 'NONE') {
-              console.log(`🔍 Fallback - AI tarafından belirtilen kategori: "${categorySlug}"`);
-              console.log(`📋 Fallback - Mevcut kategoriler:`, availableCategories.map(cat => `${cat.name} (${cat.slug})`));
-              categoryMatchResult = availableCategories.find(cat => cat.slug === categorySlug);
-              console.log(`✅ Fallback - Kategori eşleştirme sonucu:`, categoryMatchResult ? `${categoryMatchResult.name} (${categoryMatchResult.slug})` : 'BULUNAMADI');
-            }
-            
-            // Slug oluştur (title'dan)
-            const slug = titleMatch[1]
-              .toLowerCase()
-              .replace(/[^a-z0-9\s-]/g, '')
-              .replace(/\s+/g, '-')
-              .substring(0, 100);
-            
-            return {
-              title: titleMatch[1],
-              slug: slug,
-              content: contentMatch[1],
-              summary: summaryMatch ? summaryMatch[1] : titleMatch[1].substring(0, 200) + '...', // Title'dan summary oluştur
-              category_slug: categorySlug,
-              category_id: categoryMatchResult?.id,
-              category_match: categoryMatchResult,
-              confidence_score: confidenceMatch ? parseFloat(confidenceMatch[1]) : 0.5,
-              sources_used: sources,
-              is_suitable: true,
-              source_conflicts: sourceConflictsMatch ? sourceConflictsMatch[1] : '',
-            };
-          }
-        } catch (fallbackError) {
-          console.error('Fallback parsing also failed:', fallbackError);
-        }
-        
-        return null;
+        // Fallback: Manuel regex parsing
+        return this.fallbackParseResponse(answerText, availableCategories);
       }
-
-      // Gerekli alanları kontrol et
-      // Eğer AI uygun değil diyorsa, title/content zorunlu değil
-      if (parsedResponse.is_suitable !== false && (!parsedResponse.title || !parsedResponse.content)) {
-        console.error('Missing required fields in LangGraph response');
-        return null;
-      }
-
-      // Eğer uygun değilse, sadece uygunluk bilgilerini döndür
+      
+      // 2. Uygunluk kontrolü
       if (parsedResponse.is_suitable === false) {
+        console.log('⚠️ AI haberi uygun görmedi:', parsedResponse.rejection_reason);
         return {
           is_suitable: false,
-          rejection_reason: parsedResponse.rejection_reason || 'Content deemed unsuitable by AI',
+          rejection_reason: parsedResponse.rejection_reason || 'AI tarafından uygun görülmedi',
         };
       }
-
-      // Kategori eşleştirme
-      let categoryMatch = null;
-      if (parsedResponse.category_slug && parsedResponse.category_slug !== 'NONE') {
-        console.log(`🔍 AI tarafından belirtilen kategori: "${parsedResponse.category_slug}"`);
-        console.log(`📋 Mevcut kategoriler:`, availableCategories.map(cat => `${cat.name} (${cat.slug})`));
-        categoryMatch = availableCategories.find(cat => cat.slug === parsedResponse.category_slug);
-        console.log(`✅ Kategori eşleştirme sonucu:`, categoryMatch ? `${categoryMatch.name} (${categoryMatch.slug})` : 'BULUNAMADI');
-      } else {
-        console.log(`❌ AI kategori belirtmedi veya NONE döndürdü: "${parsedResponse.category_slug}"`);
+      
+      // 3. Gerekli alanları kontrol et
+      if (!parsedResponse.title || !parsedResponse.content) {
+        console.error('❌ Gerekli alanlar eksik - title veya content yok');
+        return this.fallbackParseResponse(answerText, availableCategories);
       }
-
-      // Slug oluştur (title'dan)
+      
+      // 4. Kategori eşleştirme
+      const categorySlug = parsedResponse.category_slug || 'genel';
+      const categoryMatch = availableCategories.find(cat => cat.slug === categorySlug);
+      
+      if (!categoryMatch) {
+        console.log(`⚠️ Kategori bulunamadı: "${categorySlug}", genel kategorisi aranıyor...`);
+        const generalCategory = availableCategories.find(cat => cat.slug === 'genel');
+        if (!generalCategory) {
+          console.error('❌ Genel kategori de bulunamadı!');
+          return null;
+        }
+      }
+      
+      console.log(`✅ Kategori eşleşti: ${categoryMatch?.name || 'genel'} (${categorySlug})`);
+      
+      // 5. Slug oluştur
       const slug = parsedResponse.title
         .toLowerCase()
         .replace(/[^a-z0-9\s-]/g, '')
         .replace(/\s+/g, '-')
         .substring(0, 100);
-
+      
+      // 6. Sources'ları düzenle
+      const sources = (parsedResponse.sources || []).map((source: any) => ({
+        name: source.name || 'Bilinmeyen Kaynak',
+        url: source.url || '#',
+        snippet: source.snippet || '',
+        reliability_score: source.reliability_score || 0.8,
+      }));
+      
+      console.log(`✅ Parse tamamlandı - ${sources.length} kaynak bulundu`);
+      
       return {
         title: parsedResponse.title,
         slug: slug,
@@ -345,61 +246,97 @@ export class NewsGenerationService {
         summary: parsedResponse.summary || '',
         category_id: categoryMatch?.id,
         category_match: categoryMatch,
-        category_slug: parsedResponse.category_slug,
-        confidence_score: parsedResponse.confidence_score || 0.5,
-        sources_used: (parsedResponse.sources || []).map((source: any) => ({
-          name: source.title || 'Bilinmeyen Kaynak',
-          url: source.url || '#',
-          snippet: source.snippet || '',
-          reliability_score: source.reliability_score || 0.5,
-        })),
-        processing_time: response.processing_time || 0,
-        is_suitable: parsedResponse.is_suitable,
-        rejection_reason: parsedResponse.rejection_reason,
+        category_slug: categorySlug,
+        confidence_score: parsedResponse.confidence_score || 0.8,
+        sources_used: sources,
+        is_suitable: true,
         source_conflicts: parsedResponse.source_conflicts || '',
       };
+      
     } catch (error) {
-      console.error('Error parsing LangGraph JSON response:', error);
+      console.error('❌ Parse genel hatası:', error);
       return null;
     }
   }
-
+  
   /**
-   * JSON syntax hatalarını düzeltmeye çalışır
+   * Fallback parsing - JSON parse edilemediğinde regex ile parse et
    */
-  private static fixCommonJsonSyntaxErrors(jsonString: string): string {
-    let fixed = jsonString;
-    
+  private static fallbackParseResponse(
+    answerText: string,
+    availableCategories: Pick<NewsCategory, 'id' | 'name' | 'slug'>[]
+  ): any {
     try {
-      // 1. Trailing comma'ları temizle (daha kapsamlı)
-      fixed = fixed.replace(/,(\s*[}\]])/g, '$1');
+      console.log('🔧 Fallback parsing başlatılıyor...');
       
-      // 2. Eksik virgülleri array elemanları arasına ekle
-      fixed = fixed.replace(/}(\s*){/g, '},$1{');
-      fixed = fixed.replace(/](\s*)\[/g, '],$1[');
+      // Temel alanları regex ile çıkar
+      const titleMatch = answerText.match(/"title"\s*:\s*"([^"]+)"/);
+      const contentMatch = answerText.match(/"content"\s*:\s*"([\s\S]*?)"\s*,\s*"summary"/);
+      const summaryMatch = answerText.match(/"summary"\s*:\s*"([^"]+)"/);
+      const categoryMatch = answerText.match(/"category_slug"\s*:\s*"([^"]+)"/);
+      const suitableMatch = answerText.match(/"is_suitable"\s*:\s*(true|false)/);
+      const confidenceMatch = answerText.match(/"confidence_score"\s*:\s*([0-9.]+)/);
       
-      // 3. String değerlerde eksik tırnak sorunlarını düzelt
-      // Property name'lerde eksik tırnak
-      fixed = fixed.replace(/([{,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:/g, '$1"$2":');
+      // Uygunluk kontrolü
+      if (suitableMatch && suitableMatch[1] === 'false') {
+        const reasonMatch = answerText.match(/"rejection_reason"\s*:\s*"([^"]+)"/);
+        return {
+          is_suitable: false,
+          rejection_reason: reasonMatch ? reasonMatch[1] : 'AI tarafından uygun görülmedi',
+        };
+      }
       
-      // 4. Array içinde eksik virgüller
-      fixed = fixed.replace(/}(\s*){/g, '},$1{');
-      fixed = fixed.replace(/](\s*)\[/g, '],$1[');
+      if (!titleMatch || !contentMatch) {
+        console.error('❌ Fallback parsing başarısız - temel alanlar bulunamadı');
+        return null;
+      }
       
-      // 5. Son property'den sonra virgül varsa temizle
-      fixed = fixed.replace(/,(\s*})$/g, '$1');
+      // Sources'ları parse et
+      const sources: any[] = [];
+      const sourcesMatch = answerText.match(/"sources"\s*:\s*\[([\s\S]*?)\]/);
+      if (sourcesMatch) {
+        const sourcesText = sourcesMatch[1];
+        const sourcePattern = /\{\s*"name"\s*:\s*"([^"]+)"\s*,\s*"url"\s*:\s*"([^"]+)"\s*,\s*"snippet"\s*:\s*"([^"]+)"\s*(?:,\s*"reliability_score"\s*:\s*([0-9.]+))?\s*\}/g;
+        let sourceMatch;
+        while ((sourceMatch = sourcePattern.exec(sourcesText)) !== null) {
+          sources.push({
+            name: sourceMatch[1],
+            url: sourceMatch[2],
+            snippet: sourceMatch[3],
+            reliability_score: sourceMatch[4] ? parseFloat(sourceMatch[4]) : 0.8
+          });
+        }
+      }
       
-      // 6. Çift virgülleri tek virgüle çevir
-      fixed = fixed.replace(/,,+/g, ',');
+      // Kategori eşleştirme
+      const categorySlug = categoryMatch ? categoryMatch[1] : 'genel';
+      const categoryMatchResult = availableCategories.find(cat => cat.slug === categorySlug);
       
-      // 7. Boş string'leri düzelt
-      fixed = fixed.replace(/:\s*,/g, ':"",');
-      fixed = fixed.replace(/:\s*}/g, ':""}');
+      const slug = titleMatch[1]
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .substring(0, 100);
       
-      return fixed;
+      console.log(`✅ Fallback parsing tamamlandı - ${sources.length} kaynak`);
+      
+      return {
+        title: titleMatch[1],
+        slug: slug,
+        content: contentMatch[1],
+        summary: summaryMatch ? summaryMatch[1] : titleMatch[1].substring(0, 200) + '...',
+        category_id: categoryMatchResult?.id,
+        category_match: categoryMatchResult,
+        category_slug: categorySlug,
+        confidence_score: confidenceMatch ? parseFloat(confidenceMatch[1]) : 0.5,
+        sources_used: sources,
+        is_suitable: true,
+        source_conflicts: '',
+      };
+      
     } catch (error) {
-      console.error('Error in fixCommonJsonSyntaxErrors:', error);
-      return jsonString; // Hata varsa orijinali döndür
+      console.error('❌ Fallback parsing de başarısız:', error);
+      return null;
     }
   }
 

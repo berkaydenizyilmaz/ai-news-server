@@ -376,7 +376,7 @@ export class LangGraphService {
       : '';
     
     return `
-Bu Türkçe haber konusu için önce uygunluk değerlendirmesi yap, sonra kapsamlı araştırma yaparak yeni bir haber makalesi oluştur:
+Bu Türkçe haber konusu için kapsamlı araştırma yaparak yeni bir haber makalesi oluştur:
 
 ARAŞTIRMA KONUSU:
 ${request.query}
@@ -384,70 +384,61 @@ ${request.query}
 ${availableCategories ? `MEVCUT KATEGORİLER:
 ${categoriesText}
 
-Haberin hangi kategoriye ait olduğunu belirle. Eğer hiçbir kategoriye uygun değilse "NONE" yaz.` : ''}
+Haberin hangi kategoriye ait olduğunu belirle. Eğer hiçbir kategoriye uygun değilse "genel" yaz.` : ''}
 
-ÖNCE UYGUNLUK DEĞERLENDİRMESİ YAP:
-1. İçerik metin olarak mı veriliyor yoksa bir videoya, kanala mı yönlendiriliyor?
-2. Placeholder/test içeriği mi?
-3. Çok fazla soru-cevap formatında mı (bir haber vermek yerine sadece sorular mı sorulmuş)?
-4. İçerik çok kısa veya anlamsız mı?
-5. Spam veya reklam içeriği mi?
-
-EĞER UYGUNSA GÖREVLER:
+GÖREVLER:
 1. Bu konuyla ilgili güncel gelişmeleri araştır
 2. Farklı kaynaklardan güvenilir bilgiler topla (maksimum ${request.max_results || 5} kaynak kullan)
-3. Çoklu bakış açılarını değerlendir
-4. Kapsamlı, objektif bir haber makalesi yaz
-5. Kaynaklar arasında çelişki varsa source_conflicts alanında belirt
+3. Kapsamlı, objektif bir haber makalesi yaz
+4. Kaynaklar arasında çelişki varsa source_conflicts alanında belirt
+5. Reliability score'u belirle (0-1 arası)
 
 ARAŞTIRMA DERİNLİĞİ: ${depth}
 
-ÇIKTI FORMATI (MUTLAKA GEÇERLİ JSON):
+ÇIKTI FORMATI - SADECE BU JSON'U DÖNDÜR:
 {
   "is_suitable": true,
   "rejection_reason": null,
-  "title": "Yeni, özgün başlık (maksimum 150 karakter)",
-  "content": "Kapsamlı haber metni",
-  "summary": "Kısa özet (2-3 cümle, maksimum 200 karakter)",
-  "category_slug": "uygun-kategori-slug",
-  "confidence_score": 0.8,
+  "title": "Haber başlığı",
+  "content": "Tam haber metni",
+  "summary": "Kısa özet",
+  "category_slug": "kategori-slug",
+  "confidence_score": 0.9,
+  "source_conflicts": "",
   "sources": [
     {
-      "title": "Kaynak başlığı",
-      "url": "https://kaynak-url.com",
+      "name": "Kaynak adı",
+      "url": "https://example.com",
       "snippet": "Kısa alıntı",
       "reliability_score": 0.9
     }
-  ],
-  "source_conflicts": ""
+  ]
 }
 
-KRİTİK JSON KURALLARI:
-- SADECE GEÇERLİ JSON formatında yanıt ver, başka hiçbir metin ekleme
-- Tüm string değerleri çift tırnak içinde yaz
-- Array ve object'lerde son elemandan sonra virgül KOYMA
-- Nested JSON'larda tüm parantezleri doğru kapat
-- Özel karakterleri escape et (\\n, \\", \\\\)
-- Boolean değerler: true/false (tırnak içinde değil)
-- Null değerler: null (tırnak içinde değil)
-- Sayısal değerler: 0.8 (tırnak içinde değil)
+MUTLAKA UYULACAK KURALLAR:
+1. SADECE JSON döndür, başka hiçbir metin yazma
+2. Tüm string değerleri çift tırnak içinde yaz
+3. Son property'den sonra virgül KOYMA
+4. Boolean: true/false (tırnak olmadan)
+5. Null: null (tırnak olmadan)
+6. Sayı: 0.9 (tırnak olmadan)
+7. Array'de son elemandan sonra virgül KOYMA
+8. Özel karakterleri escape et: \" \n \\
+9. Content'te satır geçişleri için \\n kullan
+10. Türkçe karakter sorun yaratmasın
 
-İÇERİK KURALLARI:
-- Türkçe içerik oluştur
-- ÖNCE is_suitable değerlendirmesi yap
-- Eğer uygun değilse is_suitable=false ve rejection_reason ver
-- Uygunsa tam haber araştırması yap
-- İçerikte köşeli parantez [] içinde kaynak referansları KULLANMA
-- Sadece en güvenilir ${request.max_results || 5} kaynağı seç ve kullan
-- Haber metninde kaynak linklerini gömme
-
-JSON SYNTAX KONTROL:
-- Her açılan { için kapanan } olmalı
-- Her açılan [ için kapanan ] olmalı
-- Property'ler arasında virgül olmalı
-- Son property'den sonra virgül OLMAMALI
-- String'lerde tırnak karakteri varsa \\" şeklinde escape et
-- Uzun metinlerde satır sonları \\n olarak escape et
+EĞER HABER UYGUN DEĞİLSE:
+{
+  "is_suitable": false,
+  "rejection_reason": "Neden uygun değil",
+  "title": null,
+  "content": null,
+  "summary": null,
+  "category_slug": null,
+  "confidence_score": 0,
+  "source_conflicts": "",
+  "sources": []
+}
 `;
   }
 
