@@ -56,7 +56,7 @@ export type LangGraphResearchInput = z.infer<typeof langGraphResearchSchema>;
 
 export class LangGraphService {
   private static baseUrl = config.aiBackend.baseUrl;
-  private static timeout = 30000; // 30 saniye (test için kısaltıldı)
+  private static timeout = 180000; // 3 dakika - LangGraph araştırması uzun sürebilir
 
   /**
    * Research News Topic using LangGraph Agent
