@@ -160,14 +160,62 @@ export class NewsGenerationService {
     try {
       const answerText = response.answer || '';
       
-      // JSON parse et
+      // JSON parse et - daha güçlü parsing
       let parsedResponse: any;
       try {
-        // JSON'u temizle (markdown kod blokları varsa)
-        const cleanJson = answerText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+        // 1. JSON'u temizle (markdown kod blokları varsa)
+        let cleanJson = answerText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+        
+        // 2. Çoklu JSON objesi varsa ilkini al
+        const jsonMatch = cleanJson.match(/\{[\s\S]*?\}/);
+        if (jsonMatch) {
+          cleanJson = jsonMatch[0];
+        }
+        
+        // 3. Trailing comma'ları temizle
+        cleanJson = cleanJson.replace(/,(\s*[}\]])/g, '$1');
+        
+        // 4. Kaçış karakterlerini düzelt
+        cleanJson = cleanJson.replace(/\\"/g, '"').replace(/\\n/g, '\n');
+        
+        // 5. JSON parse et
         parsedResponse = JSON.parse(cleanJson);
+        
       } catch (parseError) {
         console.error('Failed to parse LangGraph JSON response:', parseError);
+        console.error('Raw response:', answerText.substring(0, 500) + '...');
+        
+        // Fallback: Regex ile temel alanları çıkarmaya çalış
+        try {
+          const titleMatch = answerText.match(/"title"\s*:\s*"([^"]+)"/);
+          const contentMatch = answerText.match(/"content"\s*:\s*"([\s\S]*?)"/);
+          const suitableMatch = answerText.match(/"is_suitable"\s*:\s*(true|false)/);
+          
+          if (suitableMatch && suitableMatch[1] === 'false') {
+            const reasonMatch = answerText.match(/"rejection_reason"\s*:\s*"([^"]+)"/);
+            return {
+              is_suitable: false,
+              rejection_reason: reasonMatch ? reasonMatch[1] : 'Content deemed unsuitable by AI',
+            };
+          }
+          
+          if (titleMatch && contentMatch) {
+            console.log('⚠️ Fallback parsing kullanıldı');
+            return {
+              title: titleMatch[1],
+              content: contentMatch[1],
+              summary: '',
+              category_slug: 'NONE',
+              confidence_score: 0.5,
+              sources: [],
+              is_suitable: true,
+              source_conflicts: '',
+            };
+          }
+        } catch (fallbackError) {
+          console.error('Fallback parsing also failed:', fallbackError);
+        }
+        
         return null;
       }
 
@@ -175,8 +223,8 @@ export class NewsGenerationService {
       // Eğer AI uygun değil diyorsa, title/content zorunlu değil
       if (parsedResponse.is_suitable !== false && (!parsedResponse.title || !parsedResponse.content)) {
         console.error('Missing required fields in LangGraph response');
-      return null;
-    }
+        return null;
+      }
 
       // Eğer uygun değilse, sadece uygunluk bilgilerini döndür
       if (parsedResponse.is_suitable === false) {

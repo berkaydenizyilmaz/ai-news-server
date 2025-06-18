@@ -15,7 +15,7 @@ import config from '@/core/config';
  * LangGraph Research Request Validation Schema
  */
 export const langGraphResearchSchema = z.object({
-  query: z.string().min(10, 'Araştırma sorgusu en az 10 karakter olmalıdır').max(2000, 'Araştırma sorgusu çok uzun'),
+  query: z.string().min(10, 'Araştırma sorgusu en az 10 karakter olmalıdır').max(5000, 'Araştırma sorgusu çok uzun'),
   max_results: z.number().int().min(1).max(20).optional().default(5),
   research_depth: z.enum(['quick', 'standard', 'deep']).optional().default('standard'),
 });

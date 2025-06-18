@@ -44,7 +44,7 @@ const config = {
   
   // AI Backend Service Configuration (External LangGraph Project)
   aiBackend: {
-    baseUrl: process.env.AI_BACKEND_URL || 'http://localhost:8123', // AI backend base URL (LangGraph default port)
+    baseUrl: process.env.AI_BACKEND_URL || 'http://localhost:2024', // AI backend base URL (LangGraph actual port)
     timeout: parseInt(process.env.AI_BACKEND_TIMEOUT || '120000'), // Request timeout in ms (2 minutes)
   },
   
