@@ -183,6 +183,7 @@ export class LangGraphService {
       const response: AxiosResponse = await axios.post(
         `${this.baseUrl}/threads/${threadId}/runs`,
         {
+          assistant_id: 'agent', // LangGraph assistant ID
           input: {
             messages: [
               {
