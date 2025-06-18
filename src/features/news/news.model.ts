@@ -88,8 +88,7 @@ export class NewsModel {
           *,
           category:news_categories(id, name, slug),
           original_news:original_news(id, title, original_url, rss_source_id),
-          sources:news_sources(id, source_name, source_url, is_primary),
-          differences:news_differences(id, title, description)
+          sources:news_sources(id, source_name, source_url, is_primary)
         `, { count: 'exact' });
 
       // Filters
@@ -149,8 +148,7 @@ export class NewsModel {
           *,
           category:news_categories(id, name, slug, description),
           original_news:original_news(id, title, content, original_url, author, published_date, rss_source_id),
-          sources:news_sources(id, source_name, source_url, is_primary),
-          differences:news_differences(id, title, description)
+          sources:news_sources(id, source_name, source_url, is_primary)
         `)
         .eq('id', id)
         .single();
@@ -163,6 +161,39 @@ export class NewsModel {
       return data;
     } catch (error) {
       console.error('Error in getProcessedNewsById:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get Processed News by Slug
+   * 
+   * Slug'a göre işlenmiş haberi getirir.
+   * 
+   * @param slug - Haber slug'ı
+   * @returns {Promise<NewsWithRelations | null>}
+   */
+  static async getProcessedNewsBySlug(slug: string): Promise<NewsWithRelations | null> {
+    try {
+      const { data, error } = await supabaseAdmin
+        .from('processed_news')
+        .select(`
+          *,
+          category:news_categories(id, name, slug, description),
+          original_news:original_news(id, title, content, original_url, author, published_date, rss_source_id),
+          sources:news_sources(id, source_name, source_url, is_primary)
+        `)
+        .eq('slug', slug)
+        .single();
+
+      if (error) {
+        console.error('Error fetching processed news by slug:', error);
+        return null;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error in getProcessedNewsBySlug:', error);
       return null;
     }
   }

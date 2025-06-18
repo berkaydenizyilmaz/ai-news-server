@@ -32,34 +32,6 @@ newsRoutes.get('/', NewsController.getProcessedNews);
  */
 newsRoutes.get('/statistics', authMiddleware, NewsController.getNewsStatistics);
 
-/**
- * @route   GET /api/v1/news/:id
- * @desc    Get processed news by ID with details
- * @access  Public
- */
-newsRoutes.get('/:id', NewsController.getProcessedNewsById);
-
-/**
- * @route   POST /api/v1/news
- * @desc    Create new processed news
- * @access  Private (Admin/Moderator)
- */
-newsRoutes.post('/', authMiddleware, NewsController.createProcessedNews);
-
-/**
- * @route   PUT /api/v1/news/:id
- * @desc    Update processed news
- * @access  Private (Admin/Moderator)
- */
-newsRoutes.put('/:id', authMiddleware, NewsController.updateProcessedNews);
-
-/**
- * @route   DELETE /api/v1/news/:id
- * @desc    Delete processed news
- * @access  Private (Admin)
- */
-newsRoutes.delete('/:id', authMiddleware, NewsController.deleteProcessedNews);
-
 // ==================== NEWS CATEGORIES ROUTES ====================
 
 /**
@@ -113,4 +85,34 @@ newsRoutes.post('/process-batch', authMiddleware, NewsController.processMultiple
  * @desc    Bulk operations on news (publish, delete, update category)
  * @access  Private (Admin/Moderator)
  */
-newsRoutes.post('/bulk', authMiddleware, NewsController.bulkNewsOperation); 
+newsRoutes.post('/bulk', authMiddleware, NewsController.bulkNewsOperation);
+
+// ==================== INDIVIDUAL NEWS ROUTES (MUST BE LAST) ====================
+
+/**
+ * @route   GET /api/v1/news/:id
+ * @desc    Get processed news by ID with details
+ * @access  Public
+ */
+newsRoutes.get('/:id', NewsController.getProcessedNewsById);
+
+/**
+ * @route   POST /api/v1/news
+ * @desc    Create new processed news
+ * @access  Private (Admin/Moderator)
+ */
+newsRoutes.post('/', authMiddleware, NewsController.createProcessedNews);
+
+/**
+ * @route   PUT /api/v1/news/:id
+ * @desc    Update processed news
+ * @access  Private (Admin/Moderator)
+ */
+newsRoutes.put('/:id', authMiddleware, NewsController.updateProcessedNews);
+
+/**
+ * @route   DELETE /api/v1/news/:id
+ * @desc    Delete processed news
+ * @access  Private (Admin)
+ */
+newsRoutes.delete('/:id', authMiddleware, NewsController.deleteProcessedNews); 

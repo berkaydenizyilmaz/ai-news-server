@@ -122,18 +122,18 @@ export class NewsController {
     try {
       const { id } = req.params;
 
-      // UUID validasyonu
+      // UUID veya slug kontrolü
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-      if (!uuidRegex.test(id)) {
-        res.status(HTTP_STATUS.BAD_REQUEST).json({
-          success: false,
-          error: NEWS_ERROR_MESSAGES.INVALID_REQUEST,
-        });
-        return;
+      const isUuid = uuidRegex.test(id);
+      
+      let result;
+      if (isUuid) {
+        // UUID ile ara
+        result = await NewsService.getProcessedNewsById(id);
+      } else {
+        // Slug ile ara
+        result = await NewsService.getProcessedNewsBySlug(id);
       }
-
-      // Servis çağrısı
-      const result = await NewsService.getProcessedNewsById(id);
 
       // Yanıt
       const statusCode = result.success ? HTTP_STATUS.OK : HTTP_STATUS.NOT_FOUND;

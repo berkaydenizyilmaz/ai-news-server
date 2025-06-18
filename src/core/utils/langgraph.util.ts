@@ -395,15 +395,22 @@ GÖREVLER:
 
 ARAŞTIRMA DERİNLİĞİ: ${depth}
 
+METIN FORMATLAMA KURALLARI:
+- Her paragraf arasında \\n\\n (çift satır geçişi) kullan
+- Uzun metinleri anlamlı paragraflara böl
+- Her paragraf 3-5 cümle olsun
+- Giriş, gelişme, sonuç paragrafları oluştur
+- Liste halinde bilgiler varsa \\n ile ayır
+
 ÇIKTI FORMATI - SADECE BU JSON'U DÖNDÜR:
 {
   "is_suitable": true,
   "rejection_reason": null,
   "title": "Haber başlığı",
-  "content": "Tam haber metni - hiçbir kaynak referansı olmadan sadece düz metin",
+  "content": "Tam haber metni - paragraflar arası \\n\\n ile ayrılmış",
   "summary": "Kısa özet",
   "category_slug": "kategori-slug",
-  "confidence_score": 0.5,
+  "confidence_score": 0.9,
   "source_conflicts": "",
   "sources": [
     {
@@ -424,13 +431,14 @@ MUTLAKA UYULACAK KURALLAR:
 6. Sayı: 0.9 (tırnak olmadan)
 7. Array'de son elemandan sonra virgül KOYMA
 8. Özel karakterleri escape et: \" \n \\
-9. Content'te satır geçişleri için \\n kullan
+9. Content'te paragraf geçişleri için \\n\\n kullan
 10. Türkçe karakter sorun yaratmasın
 11. Content içinde [kaynak](link) formatı KESINLIKLE YASAK
 12. Content içinde [isim, tarih] formatı KESINLIKLE YASAK
 13. Content sadece düz metin olacak, hiçbir referans içermeyecek
 14. Tüm kaynak bilgilerini sadece sources array'inde ver ve sadece 5 kaynak seç ve kullan
 15. Content'te kaynak belirtme, sadece haber metnini yaz
+16. Paragrafları \\n\\n ile ayır, tek \\n sadece liste öğeleri için kullan
 `;
   }
 

@@ -197,6 +197,64 @@ export class NewsService {
   }
 
   /**
+   * Get Processed News by Slug with Details
+   * 
+   * Slug'a göre işlenmiş haberi detaylarıyla getirme işlemi.
+   * 
+   * @param slug - Haber slug'ı
+   * @returns {Promise<NewsServiceResponse<NewsDetailResponse>>}
+   */
+  static async getProcessedNewsBySlug(slug: string): Promise<NewsServiceResponse<NewsDetailResponse>> {
+    try {
+      const newsWithRelations = await NewsModel.getProcessedNewsBySlug(slug);
+
+      if (!newsWithRelations) {
+        return {
+          success: false,
+          error: NEWS_ERROR_MESSAGES.NEWS_NOT_FOUND,
+        };
+      }
+
+      // Görüntülenme sayısını artır
+      await NewsModel.incrementViewCount(newsWithRelations.id);
+
+      // İlgili haberleri getir (aynı kategoriden)
+      let relatedNews: ProcessedNews[] = [];
+      if (newsWithRelations.category_id) {
+        const relatedResult = await NewsModel.getProcessedNews({
+          page: 1,
+          limit: 5,
+          category_id: newsWithRelations.category_id,
+          sort_by: 'created_at',
+          sort_order: 'desc',
+        });
+
+        if (relatedResult) {
+          relatedNews = relatedResult.news
+            .filter(news => news.id !== newsWithRelations.id) // Mevcut haberi hariç tut
+            .slice(0, 4); // Maksimum 4 ilgili haber
+        }
+      }
+
+      const newsDetail: NewsDetailResponse = {
+        ...newsWithRelations,
+        related_news: relatedNews,
+      };
+
+      return {
+        success: true,
+        data: newsDetail,
+      };
+    } catch (error) {
+      console.error('Error in getProcessedNewsBySlug service:', error);
+      return {
+        success: false,
+        error: NEWS_ERROR_MESSAGES.OPERATION_FAILED,
+      };
+    }
+  }
+
+  /**
    * Update Processed News
    * 
    * İşlenmiş haberi güncelleme işlemi.
