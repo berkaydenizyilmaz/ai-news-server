@@ -13,7 +13,7 @@ export const SCHEDULER_CONFIG = {
   RSS_FETCH_TIMEOUT: 300000, // 5 dakika timeout
   
   // AI Processing Schedule  
-  AI_PROCESSING_INTERVAL: '*/1 * * * *', // Her 1 dakikada bir (test için)
+  AI_PROCESSING_INTERVAL: '*/5 * * * *', // Her 5 dakikada bir
   AI_PROCESSING_TIMEOUT: 600000, // 10 dakika timeout
   AI_BATCH_SIZE: 5, // Aynı anda işlenecek haber sayısı
   

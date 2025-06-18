@@ -138,6 +138,25 @@ export class JobQueueService extends EventEmitter {
       job.status = 'failed';
       job.failed_at = new Date().toISOString();
       job.error_message = error instanceof Error ? error.message : 'Unknown error';
+      
+      // Retry kontrolü - max retry'a ulaştıysa skipped yap
+      if (job.retry_count >= job.max_retries) {
+        console.log(`Job ${job.id} max retry'a ulaştı, skipped olarak işaretleniyor`);
+        // AI processing job'u için original news status'unu skipped yap
+        if (job.type === 'ai_processing' && (job as any).data?.original_news_ids) {
+          for (const newsId of (job as any).data.original_news_ids) {
+            try {
+              await NewsModel.updateOriginalNewsStatus(newsId, 'skipped', 'Max retry attempts reached');
+            } catch (updateError) {
+              console.error(`Status update error for news ${newsId}:`, updateError);
+            }
+          }
+        }
+      } else {
+        // Retry planla
+        this.scheduleRetry(job);
+      }
+      
       this.failedJobsCount++;
       this.emit('job_failed', job, error);
     } finally {
@@ -189,46 +208,25 @@ export class JobQueueService extends EventEmitter {
 
       console.log(`Bulunan kategori sayısı: ${categories.categories.length}`);
 
-      // Her haberi işle
-      for (let i = 0; i < pendingNews.length; i++) {
-        const originalNews = pendingNews[i];
-        console.log(`\n--- Haber ${i + 1}/${pendingNews.length} İşleniyor ---`);
-        console.log(`Haber ID: ${originalNews.id}`);
-        console.log(`Başlık: ${originalNews.title?.substring(0, 50)}...`);
-        
-        try {
-          // Status'u processing'e çek
-          console.log('Status processing olarak güncelleniyor...');
-          await NewsModel.updateOriginalNewsStatus(originalNews.id, 'processing');
+      // Haberlerin ID'lerini al
+      const newsIds = pendingNews.map(news => news.id);
+      
+      // Job data'ya news ID'lerini ekle (retry mekanizması için)
+      (job as any).data = {
+        ...((job as any).data || {}),
+        original_news_ids: newsIds,
+      };
 
-          // AI generation request hazırla
-          const generationRequest: NewsGenerationRequest = {
-            original_news_id: originalNews.id,
-            available_categories: categories.categories.map(cat => ({
-              id: cat.id,
-              name: cat.name,
-              slug: cat.slug,
-            })),
-            max_sources: 3,
-            research_depth: 'standard',
-            force_regenerate: false,
-          };
-
-          console.log('AI generation başlatılıyor...');
-          const result = await NewsGenerationService.generateNews(generationRequest);
-
-          if (result.status === 'success') {
-            console.log('✅ AI generation başarılı!');
-            console.log(`İşlenmiş haber ID: ${result.processed_news?.id}`);
-            await NewsModel.updateOriginalNewsStatus(originalNews.id, 'completed');
-          } else {
-            console.log('❌ AI generation reddedildi');
-            console.log(`Reddetme sebebi: ${result.rejection_reason}`);
-            await NewsModel.updateOriginalNewsStatus(originalNews.id, 'rejected', result.rejection_reason);
-          }
-        } catch (error) {
-          console.log(`❌ Haber işleme hatası: ${error instanceof Error ? error.message : 'Bilinmeyen hata'}`);
-          await NewsModel.updateOriginalNewsStatus(originalNews.id, 'failed', error instanceof Error ? error.message : 'Processing failed');
+      // Batch processing'i gerçekleştir
+      const batchResult = await this.processBatchNewsGeneration(newsIds, categories.categories);
+      
+      console.log(`Batch işleme tamamlandı: ${batchResult.successful_items}/${batchResult.total_items} başarılı`);
+      
+      if (batchResult.failed_items > 0) {
+        console.log(`Başarısız olan haberler: ${batchResult.failed_items}`);
+        // Eğer tüm haberler başarısız olursa error fırlat
+        if (batchResult.successful_items === 0) {
+          throw new Error(`All ${batchResult.total_items} news items failed to process`);
         }
       }
 
@@ -243,32 +241,27 @@ export class JobQueueService extends EventEmitter {
    * Execute Batch Processing Job
    */
   private async executeBatchProcessingJob(job: any): Promise<any> {
-    const results = [];
-    const errors = [];
+    console.log('=== Batch Processing Job Başlatıldı ===');
+    console.log(`Job ID: ${job.id}`);
+    console.log(`İşlenecek haber sayısı: ${job.data.original_news_ids.length}`);
 
-    for (const newsId of job.data.original_news_ids) {
-      try {
-        const result = await NewsGenerationService.generateNews({
-          original_news_id: newsId,
-          available_categories: job.metadata.availableCategories,
-        });
-        results.push(result);
-      } catch (error) {
-        errors.push({
-          item_id: newsId,
-          error: error instanceof Error ? error.message : 'Unknown error',
-        });
+    try {
+      // Kategorileri metadata'dan al veya varsayılan kullan
+      const categories = job.metadata?.availableCategories || [];
+      
+      if (categories.length === 0) {
+        throw new Error('No categories provided for batch processing');
       }
-    }
 
-    return {
-      total_items: job.data.original_news_ids.length,
-      successful_items: results.length,
-      failed_items: errors.length,
-      processing_time: Date.now() - new Date(job.started_at!).getTime(),
-      results,
-      errors,
-    };
+      // Batch processing'i gerçekleştir
+      const result = await this.processBatchNewsGeneration(job.data.original_news_ids, categories);
+      
+      console.log('=== Batch Processing Job Tamamlandı ===\n');
+      return result;
+    } catch (error) {
+      console.error('Batch Processing Job genel hatası:', error);
+      throw error;
+    }
   }
 
   /**
@@ -395,5 +388,87 @@ export class JobQueueService extends EventEmitter {
     const failedCount = this.jobQueue.filter(job => job.status === 'failed').length;
     this.jobQueue = this.jobQueue.filter(job => job.status !== 'failed');
     return failedCount;
+  }
+
+  /**
+   * Process Batch News Generation
+   * 
+   * Birden fazla haberi batch olarak işler.
+   */
+  private async processBatchNewsGeneration(
+    newsIds: string[], 
+    categories: Array<{id: string, name: string, slug: string}>
+  ): Promise<{
+    total_items: number;
+    successful_items: number;
+    failed_items: number;
+    processing_time: number;
+    results: any[];
+    errors: any[];
+  }> {
+    const startTime = Date.now();
+    const results = [];
+    const errors = [];
+
+    console.log(`Batch processing başlatılıyor: ${newsIds.length} haber`);
+
+    for (let i = 0; i < newsIds.length; i++) {
+      const newsId = newsIds[i];
+      console.log(`\n--- Haber ${i + 1}/${newsIds.length} İşleniyor (ID: ${newsId}) ---`);
+      
+      try {
+        // Status'u processing'e çek
+        await NewsModel.updateOriginalNewsStatus(newsId, 'processing');
+
+        // AI generation request hazırla
+        const generationRequest: NewsGenerationRequest = {
+          original_news_id: newsId,
+          available_categories: categories,
+          max_sources: 3,
+          research_depth: 'standard',
+          force_regenerate: false,
+        };
+
+        console.log('AI generation başlatılıyor...');
+        const result = await NewsGenerationService.generateNews(generationRequest);
+
+        if (result.status === 'success') {
+          console.log('✅ AI generation başarılı!');
+          console.log(`İşlenmiş haber ID: ${result.processed_news?.id}`);
+          await NewsModel.updateOriginalNewsStatus(newsId, 'completed');
+          results.push(result);
+        } else {
+          console.log('❌ AI generation reddedildi');
+          console.log(`Reddetme sebebi: ${result.rejection_reason}`);
+          await NewsModel.updateOriginalNewsStatus(newsId, 'rejected', result.rejection_reason);
+          errors.push({
+            item_id: newsId,
+            error: result.rejection_reason || 'Unknown rejection reason',
+            status: 'rejected'
+          });
+        }
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Processing failed';
+        console.log(`❌ Haber işleme hatası: ${errorMessage}`);
+        await NewsModel.updateOriginalNewsStatus(newsId, 'failed', errorMessage);
+        errors.push({
+          item_id: newsId,
+          error: errorMessage,
+          status: 'failed'
+        });
+      }
+    }
+
+    const processingTime = Date.now() - startTime;
+    console.log(`Batch processing tamamlandı: ${results.length} başarılı, ${errors.length} hatalı (${processingTime}ms)`);
+
+    return {
+      total_items: newsIds.length,
+      successful_items: results.length,
+      failed_items: errors.length,
+      processing_time: processingTime,
+      results,
+      errors,
+    };
   }
 } 
