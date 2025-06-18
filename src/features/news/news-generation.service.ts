@@ -189,7 +189,7 @@ export class NewsGenerationService {
         
       } catch (parseError) {
         console.error('Failed to parse LangGraph JSON response:', parseError);
-        console.error('Raw response:', answerText.substring(0, 500) + '...');
+        console.error('Raw response (full):', answerText); // Tam response'u göster
         
         // Fallback: Regex ile temel alanları çıkarmaya çalış
         try {
@@ -197,6 +197,11 @@ export class NewsGenerationService {
           const contentMatch = answerText.match(/"content"\s*:\s*"([\s\S]*?)"/);
           const suitableMatch = answerText.match(/"is_suitable"\s*:\s*(true|false)/);
           const categoryMatch = answerText.match(/"category_slug"\s*:\s*"([^"]+)"/);
+          
+          console.log('🔍 Fallback parsing sonuçları:');
+          console.log('- Title:', titleMatch ? titleMatch[1].substring(0, 50) + '...' : 'BULUNAMADI');
+          console.log('- Category slug:', categoryMatch ? categoryMatch[1] : 'BULUNAMADI');
+          console.log('- Is suitable:', suitableMatch ? suitableMatch[1] : 'BULUNAMADI');
           
           if (suitableMatch && suitableMatch[1] === 'false') {
             const reasonMatch = answerText.match(/"rejection_reason"\s*:\s*"([^"]+)"/);
