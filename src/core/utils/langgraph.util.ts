@@ -96,12 +96,12 @@ export class LangGraphService {
 
       // Thread'e mesaj gönder
       const messageResponse = await this.sendMessage(threadResponse.thread_id, researchPrompt);
-      if (!messageResponse.success) {
+      if (!messageResponse.success || !messageResponse.run_id) {
         throw new Error('Failed to send message to LangGraph');
       }
 
       // Stream response'u bekle ve işle
-      const finalResponse = await this.waitForCompletion(threadResponse.thread_id);
+      const finalResponse = await this.waitForCompletion(threadResponse.thread_id, messageResponse.run_id);
       
       return {
         success: true,
@@ -172,13 +172,13 @@ export class LangGraphService {
   /**
    * Send Message to Thread
    * 
-   * Thread'e araştırma mesajı gönderir.
+   * Thread'e araştırma mesajı gönderir ve run ID'yi döndürür.
    * 
    * @param threadId - Thread ID
    * @param message - Araştırma prompt'u
-   * @returns {Promise<{success: boolean}>}
+   * @returns {Promise<{success: boolean, run_id?: string}>}
    */
-  private static async sendMessage(threadId: string, message: string): Promise<{success: boolean}> {
+  private static async sendMessage(threadId: string, message: string): Promise<{success: boolean, run_id?: string}> {
     try {
       const response: AxiosResponse = await axios.post(
         `${this.baseUrl}/threads/${threadId}/runs`,
@@ -210,7 +210,14 @@ export class LangGraphService {
         }
       );
 
-      return { success: response.status === 200 };
+      if (response.status === 200 && response.data?.run_id) {
+        return { 
+          success: true, 
+          run_id: response.data.run_id 
+        };
+      }
+
+      return { success: false };
     } catch (error) {
       console.error('Failed to send message to LangGraph:', error);
       return { success: false };
@@ -218,17 +225,18 @@ export class LangGraphService {
   }
 
   /**
-   * Wait for Thread Completion
+   * Wait for Run Completion
    * 
-   * Thread'in tamamlanmasını bekler ve sonucu döndürür.
+   * Run'ın tamamlanmasını bekler ve sonucu döndürür.
    * 
    * @param threadId - Thread ID
+   * @param runId - Run ID
    * @returns {Promise<Partial<LangGraphResearchResponse>>}
    */
-  private static async waitForCompletion(threadId: string): Promise<Partial<LangGraphResearchResponse>> {
+  private static async waitForCompletion(threadId: string, runId: string): Promise<Partial<LangGraphResearchResponse>> {
     // Stream endpoint'ini dinle
     const response: AxiosResponse = await axios.get(
-      `${this.baseUrl}/threads/${threadId}/runs/stream`,
+      `${this.baseUrl}/threads/${threadId}/runs/${runId}/stream`,
       {
         timeout: this.timeout,
         headers: {
