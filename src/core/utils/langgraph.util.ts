@@ -277,7 +277,16 @@ export class LangGraphService {
               }
               
               const data = JSON.parse(jsonStr);
-              console.log('📋 LangGraph stream data:', JSON.stringify(data, null, 2));
+              
+              // Messages array'inde AI response'unu ara
+              if (data.messages && Array.isArray(data.messages)) {
+                for (const message of data.messages) {
+                  if (message.type === 'ai' && message.content) {
+                    console.log('🤖 AI message yakalandı:', message.content.substring(0, 200) + '...');
+                    finalAnswer = message.content;
+                  }
+                }
+              }
               
               // Final answer'ı yakala - farklı formatları dene
               if (data.type === 'final' && data.content) {
@@ -368,7 +377,7 @@ Haberin hangi kategoriye ait olduğunu belirle. Eğer hiçbir kategoriye uygun d
 
 GÖREVLER:
 1. Bu konuyla ilgili güncel gelişmeleri araştır
-2. Farklı kaynaklardan güvenilir bilgiler topla (minimum ${request.max_results || 5} kaynak)
+2. Farklı kaynaklardan güvenilir bilgiler topla (maksimum ${request.max_results || 5} kaynak kullan)
 3. Çoklu bakış açılarını değerlendir
 4. Kapsamlı, objektif bir haber makalesi yaz
 5. Orijinal haberle karşılaştırma yap
