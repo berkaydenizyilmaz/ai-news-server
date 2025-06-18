@@ -214,11 +214,23 @@ export class NewsGenerationService {
           if (titleMatch && contentMatch) {
             console.log('⚠️ Fallback parsing kullanıldı');
             const categorySlug = categoryMatch ? categoryMatch[1] : 'NONE';
+            
+            // Fallback parsing'de de kategori eşleştirme yap
+            let categoryMatchResult = null;
+            if (categorySlug && categorySlug !== 'NONE') {
+              console.log(`🔍 Fallback - AI tarafından belirtilen kategori: "${categorySlug}"`);
+              console.log(`📋 Fallback - Mevcut kategoriler:`, availableCategories.map(cat => `${cat.name} (${cat.slug})`));
+              categoryMatchResult = availableCategories.find(cat => cat.slug === categorySlug);
+              console.log(`✅ Fallback - Kategori eşleştirme sonucu:`, categoryMatchResult ? `${categoryMatchResult.name} (${categoryMatchResult.slug})` : 'BULUNAMADI');
+            }
+            
             return {
               title: titleMatch[1],
               content: contentMatch[1],
               summary: '',
               category_slug: categorySlug,
+              category_id: categoryMatchResult?.id,
+              category_match: categoryMatchResult,
               confidence_score: 0.5,
               sources: [],
               is_suitable: true,
