@@ -198,11 +198,9 @@ export class LangGraphService {
           },
           config: {
             configurable: {
-              // LangGraph config parametreleri
+              // LangGraph config parametreleri - sadece desteklenen parametreler
               max_research_loops: 3,
               number_of_initial_queries: 3,
-              reasoning_model: 'gemini-2.0-flash-thinking-exp',
-              query_generator_model: 'gemini-2.0-flash-exp',
             }
           }
         },
@@ -277,6 +275,13 @@ export class LangGraphService {
               }
               
               const data = JSON.parse(jsonStr);
+              
+              // Error event'i kontrol et
+              if (data.error) {
+                console.error('❌ LangGraph stream error:', data.error, data.message);
+                reject(new Error(`LangGraph error: ${data.error} - ${data.message}`));
+                return;
+              }
               
               // Messages array'inde AI response'unu ara
               if (data.messages && Array.isArray(data.messages)) {
