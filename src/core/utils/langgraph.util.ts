@@ -95,13 +95,19 @@ export class LangGraphService {
       const researchPrompt = this.buildResearchPrompt(validatedRequest, availableCategories);
 
       // Thread'e mesaj gönder
+      console.log(`🔄 LangGraph run oluşturuluyor: ${threadResponse.thread_id}`);
       const messageResponse = await this.sendMessage(threadResponse.thread_id, researchPrompt);
       if (!messageResponse.success || !messageResponse.run_id) {
+        console.error('❌ LangGraph run oluşturulamadı:', messageResponse);
         throw new Error('Failed to send message to LangGraph');
       }
 
+      console.log(`✅ LangGraph run oluşturuldu: ${messageResponse.run_id}`);
+      
       // Stream response'u bekle ve işle
+      console.log(`🔄 LangGraph stream dinleniyor...`);
       const finalResponse = await this.waitForCompletion(threadResponse.thread_id, messageResponse.run_id);
+      console.log(`✅ LangGraph stream tamamlandı`);
       
       return {
         success: true,
@@ -217,9 +223,14 @@ export class LangGraphService {
         };
       }
 
+      console.error('❌ LangGraph run response invalid:', response.status, response.data);
       return { success: false };
-    } catch (error) {
-      console.error('Failed to send message to LangGraph:', error);
+    } catch (error: any) {
+      console.error('❌ LangGraph run oluşturma hatası:', error.message);
+      if (error.response) {
+        console.error('❌ Response status:', error.response.status);
+        console.error('❌ Response data:', error.response.data);
+      }
       return { success: false };
     }
   }
