@@ -188,23 +188,16 @@ export class LangGraphService {
         `${this.baseUrl}/threads/${threadId}/runs`,
         {
           assistant_id: 'agent', // LangGraph assistant ID
-          input: {
-            messages: [
-              {
-                role: 'human',
-                content: message,
-              }
-            ]
-          },
-          config: {
-            configurable: {
-              query_generator_model: 'gemini-2.0-flash',
-              reflection_model: 'gemini-2.5-flash-preview-04-17',
-              answer_model: 'gemini-2.5-pro-preview-05-06',
-              number_of_initial_queries: 3,
-              max_research_loops: 2
+          messages: [
+            {
+              type: 'human',
+              content: message,
+              id: Date.now().toString(),
             }
-          }
+          ],
+          initial_search_query_count: 3,
+          max_research_loops: 2,
+          reasoning_model: 'gemini-2.5-flash-preview-04-17'
         },
         {
           timeout: this.timeout,
