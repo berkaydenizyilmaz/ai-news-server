@@ -56,45 +56,28 @@ export class NewsGenerationService {
         };
       }
 
-      // 2. İçerik validasyonu
-      const validation = await this.validateNewsContent(
-        originalNews, 
-        generationInput.available_categories
-      );
-
-      if (!validation.is_valid || !validation.is_suitable) {
-        // Validation failed - rejected status
-        await NewsModel.updateOriginalNewsStatus(originalNews.id, 'rejected', validation.rejection_reasons.join(', '));
-        
-        return {
-          status: 'rejected',
-          rejection_reason: validation.rejection_reasons.join(', '),
-          processing_time: Date.now() - startTime,
-        };
-      }
-
-      // 3. LangGraph research request hazırla
+      // 2. LangGraph research request hazırla
       const researchRequest: LangGraphResearchRequest = {
         query: `${originalNews.title}\n\n${originalNews.content || ''}`,
         max_results: generationInput.max_sources || NEWS_GENERATION_CONFIG.MAX_SOURCES,
         research_depth: generationInput.research_depth || 'standard',
       };
 
-      // 4. LangGraph ile araştırma yap
+      // 3. LangGraph ile araştırma yap - AI karar verecek
       const researchResponse = await LangGraphService.researchNewsTopic(
         researchRequest,
         generationInput.available_categories
       );
-      
+
       if (!researchResponse.success || !researchResponse.answer) {
         return {
           status: 'rejected',
           rejection_reason: researchResponse.error || NEWS_ERROR_MESSAGES.GENERATION_FAILED,
           processing_time: Date.now() - startTime,
-      };
+        };
       }
 
-      // 5. LangGraph JSON response'unu parse et
+      // 4. LangGraph JSON response'unu parse et
       const processedContent = await this.parseLangGraphJsonResponse(
         researchResponse, 
         generationInput.available_categories
@@ -108,10 +91,17 @@ export class NewsGenerationService {
         };
       }
 
-      // 6. Kategori kontrolü - NONE ise skipped yap
+      // 5. AI'nın kararını kontrol et
+      if (processedContent.is_suitable === false) {
+        return {
+          status: 'rejected',
+          rejection_reason: processedContent.rejection_reason || 'AI deemed content unsuitable',
+          processing_time: Date.now() - startTime,
+        };
+      }
+
+      // 6. Kategori kontrolü - AI NONE dönerse reject
       if (processedContent.category_slug === 'NONE' || !processedContent.category_match) {
-        await NewsModel.updateOriginalNewsStatus(originalNews.id, 'rejected', NEWS_ERROR_MESSAGES.GENERATION_NO_CATEGORY_MATCH);
-        
         return {
           status: 'rejected',
           rejection_reason: NEWS_ERROR_MESSAGES.GENERATION_NO_CATEGORY_MATCH,
@@ -119,19 +109,7 @@ export class NewsGenerationService {
         };
       }
 
-      // 7. Confidence kontrolü
-      if (processedContent.confidence_score < NEWS_VALIDATION_RULES.MIN_CONFIDENCE) {
-        const rejectionReason = `Düşük güven skoru: ${processedContent.confidence_score}`;
-        await NewsModel.updateOriginalNewsStatus(originalNews.id, 'rejected', rejectionReason);
-        
-        return {
-          status: 'rejected',
-          rejection_reason: rejectionReason,
-          processing_time: Date.now() - startTime,
-        };
-      }
-
-      // 8. Veritabanına kaydet
+      // 7. Veritabanına kaydet
       const savedNews = await this.saveGeneratedNews(
         originalNews,
         processedContent,
@@ -194,9 +172,18 @@ export class NewsGenerationService {
       }
 
       // Gerekli alanları kontrol et
-      if (!parsedResponse.title || !parsedResponse.content) {
+      // Eğer AI uygun değil diyorsa, title/content zorunlu değil
+      if (parsedResponse.is_suitable !== false && (!parsedResponse.title || !parsedResponse.content)) {
         console.error('Missing required fields in LangGraph response');
-        return null;
+      return null;
+    }
+
+      // Eğer uygun değilse, sadece uygunluk bilgilerini döndür
+      if (parsedResponse.is_suitable === false) {
+        return {
+          is_suitable: false,
+          rejection_reason: parsedResponse.rejection_reason || 'Content deemed unsuitable by AI',
+        };
       }
 
       // Kategori eşleştirme
@@ -228,6 +215,9 @@ export class NewsGenerationService {
           reliability_score: source.reliability_score || 0.5,
         })),
         processing_time: response.processing_time || 0,
+        is_suitable: parsedResponse.is_suitable,
+        rejection_reason: parsedResponse.rejection_reason,
+        source_conflicts: parsedResponse.source_conflicts || '',
       };
     } catch (error) {
       console.error('Error parsing LangGraph JSON response:', error);
@@ -235,126 +225,26 @@ export class NewsGenerationService {
     }
   }
 
-  // ==================== CONTENT VALIDATION ====================
+  // ==================== CONTENT VALIDATION - DEPRECATED ====================
+  // Bu metodlar artık kullanılmıyor - AI direkt karar veriyor
 
-  /**
-   * Validate News Content Quality and Suitability
-   * 
-   * Haber içeriğinin kalitesini ve işlenebilirliğini kontrol eder.
-   * 
-   * @param originalNews - Orijinal haber
-   * @param availableCategories - Mevcut kategoriler
-   * @returns {Promise<NewsValidationResult>}
-   */
+  /*
   static async validateNewsContent(
     originalNews: OriginalNews,
     availableCategories: Pick<NewsCategory, 'id' | 'name' | 'slug'>[]
   ): Promise<NewsValidationResult> {
-    const rejectionReasons: string[] = [];
-    let qualityScore = 1.0;
-
-    // İçerik analizi
-    const content = originalNews.content || '';
-    const title = originalNews.title;
-    
-    const wordCount = content.split(/\s+/).length;
-    const sentenceCount = content.split(/[.!?]+/).length;
-    const questionCount = (content.match(/\?/g) || []).length;
-
-    // 1. Uzunluk kontrolü
-    if (content.length < NEWS_GENERATION_CONFIG.MIN_CONTENT_LENGTH) {
-      rejectionReasons.push(NEWS_ERROR_MESSAGES.GENERATION_CONTENT_TOO_SHORT);
-      qualityScore -= 0.4;
-    }
-
-    // 2. Video içerik tespiti
-    const hasVideoContent = NEWS_GENERATION_CONFIG.VIDEO_KEYWORDS.some(keyword =>
-      content.toLowerCase().includes(keyword.toLowerCase()) ||
-      title.toLowerCase().includes(keyword.toLowerCase())
-    );
-
-    if (hasVideoContent) {
-      rejectionReasons.push(NEWS_ERROR_MESSAGES.GENERATION_VIDEO_CONTENT);
-      qualityScore -= 0.5;
-    }
-
-    // 3. Placeholder içerik tespiti
-    const hasPlaceholderContent = NEWS_GENERATION_CONFIG.PLACEHOLDER_KEYWORDS.some(keyword =>
-      content.toLowerCase().includes(keyword.toLowerCase())
-    );
-
-    if (hasPlaceholderContent) {
-      rejectionReasons.push(NEWS_ERROR_MESSAGES.GENERATION_PLACEHOLDER_CONTENT);
-      qualityScore -= 0.3;
-    }
-
-    // 4. Soru oranı kontrolü
-    const questionRatio = questionCount / Math.max(sentenceCount, 1);
-    if (questionCount > NEWS_GENERATION_CONFIG.QUESTION_THRESHOLD || questionRatio > NEWS_VALIDATION_RULES.MAX_QUESTION_RATIO) {
-      rejectionReasons.push(NEWS_ERROR_MESSAGES.GENERATION_QUESTION_ONLY);
-      qualityScore -= 0.3;
-    }
-
-    // 5. Kategori eşleştirme (AI ile)
-    const categoryMatch = await this.findBestCategoryMatch(originalNews, availableCategories);
-    
-    if (!categoryMatch) {
-      rejectionReasons.push(NEWS_ERROR_MESSAGES.GENERATION_NO_CATEGORY_MATCH);
-      qualityScore -= 0.4;
-    }
-
-    const isValid = rejectionReasons.length === 0;
-    const isSuitable = qualityScore >= NEWS_VALIDATION_RULES.MIN_CONFIDENCE;
-
-    return {
-      is_valid: isValid,
-      is_suitable: isSuitable,
-      category_match: categoryMatch || undefined,
-      rejection_reasons: rejectionReasons,
-      quality_score: Math.max(0, qualityScore),
-      content_analysis: {
-        word_count: wordCount,
-        sentence_count: sentenceCount,
-        question_count: questionCount,
-        has_video_content: hasVideoContent,
-        has_placeholder_content: hasPlaceholderContent,
-      },
-    };
+    // DEPRECATED - AI artık bu kararı veriyor
   }
 
-  // ==================== CATEGORY MATCHING ====================
-
-  // ==================== HELPER METHODS ====================
-
-  /**
-   * Find Best Category Match using AI
-   * 
-   * AI kullanarak haberin en uygun kategorisini bulur.
-   * 
-   * @param originalNews - Orijinal haber
-   * @param categories - Mevcut kategoriler
-   * @returns {Promise<Pick<NewsCategory, 'id' | 'name' | 'slug'> | null>}
-   */
   static async findBestCategoryMatch(
     originalNews: OriginalNews,
     categories: Pick<NewsCategory, 'id' | 'name' | 'slug'>[]
   ): Promise<Pick<NewsCategory, 'id' | 'name' | 'slug'> | null> {
-    // Basit kategori eşleştirme - ileride AI ile geliştirilebilir
-    const content = (originalNews.title + ' ' + (originalNews.content || '')).toLowerCase();
-    
-    // Anahtar kelime bazlı basit eşleştirme
-    for (const category of categories) {
-      const categoryKeywords = category.name.toLowerCase().split(' ');
-      const hasMatch = categoryKeywords.some(keyword => content.includes(keyword));
-      
-      if (hasMatch) {
-        return category;
-      }
-    }
-
-    // Varsayılan kategori döndür (ilk kategori)
-    return categories[0] || null;
+    // DEPRECATED - AI artık kategori eşleştirmesi yapıyor
   }
+  */
+
+  // ==================== HELPER METHODS ====================
 
   /**
    * Save Generated News to Database
@@ -375,9 +265,9 @@ export class NewsGenerationService {
     sources?: NewsSource[];
   }> {
     try {
-      // 1. Differences'ı string'e çevir
-      const differencesAnalysis = generatedContent.differences_found && generatedContent.differences_found.length > 0
-        ? JSON.stringify(generatedContent.differences_found)
+      // 1. Source conflicts'ı kaydet
+      const sourceConflictsAnalysis = generatedContent.source_conflicts && generatedContent.source_conflicts.trim()
+        ? generatedContent.source_conflicts
         : null;
 
       // 2. Processed news oluştur
@@ -390,7 +280,7 @@ export class NewsGenerationService {
         image_url: originalNews.image_url, // RSS'den gelen resim
         category_id: category.id,
         confidence_score: generatedContent.confidence_score,
-        differences_analysis: differencesAnalysis || undefined,
+        differences_analysis: sourceConflictsAnalysis || undefined,
       });
 
       if (!processedNews) {

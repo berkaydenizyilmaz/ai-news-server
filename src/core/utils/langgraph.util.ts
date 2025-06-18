@@ -376,7 +376,7 @@ export class LangGraphService {
       : '';
     
     return `
-Bu Türkçe haber konusu için kapsamlı araştırma yap ve yeni bir haber makalesi oluştur:
+Bu Türkçe haber konusu için önce uygunluk değerlendirmesi yap, sonra kapsamlı araştırma yaparak yeni bir haber makalesi oluştur:
 
 ARAŞTIRMA KONUSU:
 ${request.query}
@@ -386,17 +386,26 @@ ${categoriesText}
 
 Haberin hangi kategoriye ait olduğunu belirle. Eğer hiçbir kategoriye uygun değilse "NONE" yaz.` : ''}
 
-GÖREVLER:
+ÖNCE UYGUNLUK DEĞERLENDİRMESİ YAP:
+1. İçerik metin olarak mı veriliyor yoksa bir videoya, kanala mı yönlendiriliyor?
+2. Placeholder/test içeriği mi?
+3. Çok fazla soru-cevap formatında mı (bir haber vermek yerine sadece sorular mı sorulmuş)?
+4. İçerik çok kısa veya anlamsız mı?
+5. Spam veya reklam içeriği mi?
+
+EĞER UYGUNSA GÖREVLER:
 1. Bu konuyla ilgili güncel gelişmeleri araştır
 2. Farklı kaynaklardan güvenilir bilgiler topla (maksimum ${request.max_results || 5} kaynak kullan)
 3. Çoklu bakış açılarını değerlendir
 4. Kapsamlı, objektif bir haber makalesi yaz
-5. Orijinal haberle karşılaştırma yap
+5. Kaynaklar arasında çelişki varsa source_conflicts alanında belirt
 
 ARAŞTIRMA DERİNLİĞİ: ${depth}
 
 ÇIKTI FORMATI (JSON):
 {
+  "is_suitable": true/false,
+  "rejection_reason": "Eğer is_suitable=false ise açıklama",
   "title": "Yeni, özgün başlık (maksimum 150 karakter)",
   "content": "Kapsamlı haber metni",
   "summary": "Kısa özet (2-3 cümle, maksimum 200 karakter)",
@@ -410,21 +419,15 @@ ARAŞTIRMA DERİNLİĞİ: ${depth}
       "reliability_score": 0.9
     }
   ],
-  "differences": [
-    {
-      "title": "Ana fark başlığı",
-      "description": "Orijinal haberden farkı açıkla"
-    }
-  ]
+  "source_conflicts": "Eğer kaynaklar arasında önemli çelişkiler varsa buraya yaz, yoksa boş bırak"
 }
 
 ÖNEMLI KURALLAR:
 - Sadece JSON formatında yanıt ver, başka metin ekleme
 - Türkçe içerik oluştur
-- Güncel, doğrulanabilir kaynaklara odaklan
-- Orijinal haberden farklı açılar ve detaylar ekle
-- Confidence score 0.0-1.0 arası olmalı
-- Eğer kategori uygun değilse confidence'ı 0.3'ün altında tut
+- ÖNCE is_suitable değerlendirmesi yap
+- Eğer uygun değilse is_suitable=false ve rejection_reason ver
+- Uygunsa tam haber araştırması yap
 - İçerikte köşeli parantez [] içinde kaynak referansları KULLANMA
 - Sadece en güvenilir ${request.max_results || 5} kaynağı seç ve kullan
 - Haber metninde kaynak linklerini gömme
