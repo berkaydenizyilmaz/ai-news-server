@@ -256,11 +256,14 @@ export class LangGraphService {
       let confidence = 0.8;
       const startTime = Date.now();
 
+      let buffer = '';
+      
       response.data.on('data', (chunk: Buffer) => {
-        const chunkStr = chunk.toString();
-        console.log('📦 LangGraph stream chunk:', chunkStr.substring(0, 200) + '...');
+        buffer += chunk.toString();
         
-        const lines = chunkStr.split('\n');
+        // Complete lines'ları işle
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || ''; // Son incomplete line'ı buffer'da tut
         
         for (const line of lines) {
           if (line.startsWith('data: ')) {
@@ -270,6 +273,8 @@ export class LangGraphService {
                 console.log('🏁 LangGraph stream finished');
                 continue;
               }
+              
+              if (jsonStr === '') continue; // Empty data lines
               
               const data = JSON.parse(jsonStr);
               
@@ -284,36 +289,40 @@ export class LangGraphService {
               if (data.messages && Array.isArray(data.messages)) {
                 for (const message of data.messages) {
                   if (message.type === 'ai' && message.content) {
-                    console.log('🤖 AI message yakalandı:', message.content.substring(0, 200) + '...');
-                    finalAnswer = message.content;
+                    console.log('🤖 AI message yakalandı');
+                    
+                    // JSON formatında haber makalesi arayalım
+                    const content = message.content;
+                    const jsonMatch = content.match(/```json\s*(\{[\s\S]*?\})\s*```/);
+                    
+                    if (jsonMatch) {
+                      try {
+                        const newsData = JSON.parse(jsonMatch[1]);
+                        console.log('✅ Haber JSON\'u parse edildi:', newsData.title?.substring(0, 50));
+                        finalAnswer = JSON.stringify(newsData);
+                        
+                        // Kaynak ve confidence bilgilerini al
+                        if (newsData.sources) sources = newsData.sources;
+                        if (newsData.confidence_score) confidence = newsData.confidence_score;
+                      } catch (jsonError) {
+                        console.log('⚠️ Haber JSON parse hatası, raw content kullanılıyor');
+                        finalAnswer = content;
+                      }
+                    } else {
+                      finalAnswer = content;
+                    }
                   }
                 }
               }
               
-              // Final answer'ı yakala - farklı formatları dene
-              if (data.type === 'final' && data.content) {
-                finalAnswer = data.content;
-                console.log('✅ Final answer yakalandı:', finalAnswer.substring(0, 100) + '...');
-              } else if (data.content && typeof data.content === 'string') {
-                finalAnswer += data.content;
-                console.log('📝 Content eklendi:', data.content.substring(0, 50) + '...');
-              }
-              
-              // Sources'ları yakala
-              if (data.sources && Array.isArray(data.sources)) {
-                sources = data.sources;
-                console.log('📚 Sources yakalandı:', sources.length, 'adet');
-              }
-              
-              // Confidence score'u yakala
-              if (data.confidence_score) {
-                confidence = data.confidence_score;
-                console.log('🎯 Confidence yakalandı:', confidence);
-              }
             } catch (parseError) {
-              console.log('⚠️ JSON parse hatası:', line);
+              // Parse edilemeyen chunk'ları logla ama devam et
+              const preview = line.length > 100 ? line.substring(0, 100) + '...' : line;
+              console.log('⚠️ JSON parse hatası:', preview);
               continue;
             }
+          } else if (line.trim() === ': heartbeat') {
+            console.log('💓 Heartbeat');
           }
         }
       });
