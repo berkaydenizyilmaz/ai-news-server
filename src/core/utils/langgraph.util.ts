@@ -187,17 +187,19 @@ export class LangGraphService {
       const response: AxiosResponse = await axios.post(
         `${this.baseUrl}/threads/${threadId}/runs`,
         {
-          assistant_id: 'agent', // LangGraph assistant ID
-          messages: [
-            {
-              type: 'human',
-              content: message,
-              id: Date.now().toString(),
-            }
-          ],
-          initial_search_query_count: 3,
-          max_research_loops: 2,
-          reasoning_model: 'gemini-2.5-flash-preview-04-17'
+          assistant_id: 'agent',
+          input: {
+            messages: [
+              {
+                type: 'human',
+                content: message,
+                id: Date.now().toString(),
+              }
+            ],
+            initial_search_query_count: 3,
+            max_research_loops: 2,
+            reasoning_model: 'gemini-2.5-flash-preview-04-17'
+          }
         },
         {
           timeout: this.timeout,
