@@ -400,7 +400,7 @@ ARAŞTIRMA DERİNLİĞİ: ${depth}
   "is_suitable": true,
   "rejection_reason": null,
   "title": "Haber başlığı",
-  "content": "Tam haber metni",
+  "content": "Tam haber metni - hiçbir kaynak referansı olmadan sadece düz metin",
   "summary": "Kısa özet",
   "category_slug": "kategori-slug",
   "confidence_score": 0.9,
@@ -426,21 +426,11 @@ MUTLAKA UYULACAK KURALLAR:
 8. Özel karakterleri escape et: \" \n \\
 9. Content'te satır geçişleri için \\n kullan
 10. Türkçe karakter sorun yaratmasın
-11. Content içinde [kaynak](link) formatı KULLANMA - sadece düz metin yaz
-12. Kaynak bilgilerini sadece sources array'inde ver
-
-EĞER HABER UYGUN DEĞİLSE:
-{
-  "is_suitable": false,
-  "rejection_reason": "Neden uygun değil",
-  "title": null,
-  "content": null,
-  "summary": null,
-  "category_slug": null,
-  "confidence_score": 0,
-  "source_conflicts": "",
-  "sources": []
-}
+11. Content içinde [kaynak](link) formatı KESINLIKLE YASAK
+12. Content içinde [isim, tarih] formatı KESINLIKLE YASAK
+13. Content sadece düz metin olacak, hiçbir referans içermeyecek
+14. Tüm kaynak bilgilerini sadece sources array'inde ver ve sadece 5 kaynak seç ve kullan
+15. Content'te kaynak belirtme, sadece haber metnini yaz
 `;
   }
 
