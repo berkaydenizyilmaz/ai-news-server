@@ -74,8 +74,8 @@ export class ReportsService {
         };
       }
 
-      // Kendi içeriğini şikayet etme kontrolü
-      if (contentValidation.author_id === reporterId) {
+      // Kendi içeriğini şikayet etme kontrolü (news için geçerli değil çünkü AI tarafından oluşturuluyor)
+      if (contentValidation.author_id && contentValidation.author_id === reporterId) {
         return {
           success: false,
           error: REPORT_ERROR_MESSAGES.SELF_REPORT_NOT_ALLOWED,

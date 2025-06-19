@@ -250,7 +250,7 @@ export class ReportsModel {
       switch (contentType) {
         case 'news':
           tableName = 'processed_news';
-          selectFields = 'id, title, status, user_id';
+          selectFields = 'id, title';
           break;
         case 'comment':
           tableName = 'comments';
@@ -292,7 +292,7 @@ export class ReportsModel {
       const contentData = data as any;
 
       const isActive = contentType === 'news' 
-        ? contentData.status === 'published'
+        ? true // Processed news items are always active/published
         : contentType === 'forum_topic'
         ? contentData.status === 'active'
         : !contentData.is_deleted;
@@ -301,7 +301,7 @@ export class ReportsModel {
         exists: true,
         content_type: contentType,
         content_id: contentId,
-        author_id: contentData.user_id,
+        author_id: contentData.user_id || null, // News don't have user_id
         title: contentData.title || contentData.content?.substring(0, 50),
         is_active: isActive,
       };
