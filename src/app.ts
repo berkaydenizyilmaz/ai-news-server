@@ -20,6 +20,7 @@ import { usersRoutes } from '@/features/users';
 import { newsRoutes } from '@/features/news';
 import { automationRoutes } from '@/features/automation';
 import { commentsRouter } from '@/features/comments';
+import { forumRouter } from '@/features/forum';
 
 const app = express();
 
@@ -89,6 +90,9 @@ app.use('/api/news', newsRoutes);
 
 // Comments routes
 app.use('/api/comments', commentsRouter);
+
+// Forum routes
+app.use('/api/forum', forumRouter);
 
 // Automation routes
 app.use('/api/automation', automationRoutes);
