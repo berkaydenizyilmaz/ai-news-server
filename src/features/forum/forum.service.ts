@@ -270,6 +270,7 @@ export class ForumTopicService {
         message: FORUM_SUCCESS_MESSAGES.TOPIC_CREATED
       };
     } catch (error) {
+      console.error('Error in createTopic:', error);
       return {
         success: false,
         error: 'Konu oluşturulamadı'
